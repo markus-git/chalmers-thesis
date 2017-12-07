@@ -23,11 +23,9 @@ Over the last few years, the amount of traffic going back and forth between devi
 High demands for efficiency under tight latency and resource constraints have greatly influenced the development of embedded systems used for communications infrastructure. Today, digital signal processing software for embedded systems is typically written in low level dialect of C. This choice of language is primarily driven by the desire to access the full potential of a processor or memory system, where the use of high level abstractions could have introduced inefficiencies. Low level languages do however force developers to focus on low level implementation details rather than any higher level, mathematical specification of the algorithm they are developing. This in turn has the unfortunate consequence of discouraging developers from focusing on other, less immediate aspects of software development such as portability and modularity. Its difficult to get back these aspects later in the development cycle, as by then any design decisions will be tightly coupled with the implementation.
 
 
+As important as it is to increase the computational power of embedded systems, limiting their power consumption presents an equally important issue in their architectural design~\cite{mudge2001}. The trend of trading power for performance cannot continue indefinitely: house hold processors today typically have a power density of 70W and upwards, which is seven times that of a typical hot plate. Containing the growth in power requires architectural improvements, with specialized computing for specialized tasks. Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems that use more than one kind of processor or cores. These systems gain performance or energy efficiency not just by adding more of the same type of processors, but by adding different kinds of co-processors, usually incorporating specialized processing capabilities to handle particular tasks.
 
-% Heterogeneous computing refers to systems that use more than one kind of processor or cores. These systems gain performance or energy efficiency not just by adding the same type of processors, but by adding dissimilar co-processors, usually incorporating specialized processing capabilities to handle particular tasks.
-
-
-% This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
+This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
 
 \section{Background}
 

@@ -25,6 +25,8 @@ High demands for efficiency under tight latency and resource constraints have gr
 
 As important as it is to increase the computational power of embedded systems, limiting their power consumption presents an equally important issue in their architectural design~\cite{mudge2001}. The trend of trading power for performance cannot continue indefinitely: house hold processors today typically have a power density of 70W and upwards, which is seven times that of a typical hot plate. Containing the growth in power requires architectural improvements, with specialized computing for specialized tasks. Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems that use more than one kind of processor or cores. These systems gain performance or energy efficiency not just by adding more of the same type of processors, but by adding different kinds of co-processors, usually incorporating specialized processing capabilities to handle particular tasks.
 
+Heterogeneous computing systems present new software challenges not found in the development for typical homogeneous systems: sequential programming of low level signal processing is hard, parallel programming is harder, and parallel programming of heterogeneous machines is a considerable challenge. Though performance and power efficiency constraints further complicates the development of such systems.
+
 This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
 
 \section{Background}

@@ -43,28 +43,13 @@ High demands for efficiency under resource constraints have greatly influenced t
 Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
 
 \subsection{Difficulties of heterogeneity}
+\label{issues}
 
 While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors and accelerators are typically programmed in a low level dialect of C or assembler.  This choice of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, low level languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
 
-Furthermore, in the design of a heterogenous systems there's also concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that to variations in performance and power consumption.
+Furthermore, in the design of a heterogenous systems there's also concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
 
 One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component. In heterogeneous system design, the developer must specify both hardware and software parts, and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is a major undertaking.
-
-\section{The Co-Feldspar language}
-
-\lipsum[1]
-
-\subsection{Functional programming}
-
-\lipsum[2]
-
-\subsection{Domain Specific Languages}
-
-\lipsum[3]
-
-\subsection{Domain Specific Embedded Languages}
-
-\lipsum[4]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -81,6 +66,38 @@ One of the benefits of low level code is that it gives programmers fine control 
 %  ""    "**"`
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{The Co-Design Language}
+
+Many of the issues in section~\ref{issues} that one faces in heterogenous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a seperate design decision. In imperative languages like C, this is however quite difficult to do. HDLs contrast this by assuming programs to be parallel by default.
+
+Issues with differences in language design between imperative languages and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
+
+
+
+\subsection{Functional Programming}
+
+Functional programming, like its name implies, is based around the application of functions to its arguments. Programs are written as functions that accept input and delivers its result. These functions themselves are defined in terms of smaller functions, which in turn are defined used smaller functions still. At the very end, a function will only consist of language primitives, like built-in functions, variables or constants. An interesting distinction between functions in a functional language and, say an imperative language like C, is that functions always return the same value when given same arguments. This comes as a consequence from how functional languages contain no assignment statements, so a variable will never change once it has been given a value. More generally, functional programs have no side effects. This property turns out to be quite handy, as it makes the separates the function definition from its evaluation. Functions can be evaluate in parallel as long at their data dependencies are satisfied.
+
+A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides the aforementioned glue code that lets programmers build functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions are provided that implements common operations. One such function is the \codei{map} function, which can be defined as follows.
+
+\begin{code}
+map :: (a -> b) -> [a] -> [b]
+map f []     = []
+map f (x:xs) = f x : map f xs
+\end{code}
+
+The first line specifies the type of the function, and says that its first argument is a function \codei{f :: a -> b} that, given an argument of type \codei{a}, produces a result of type \codei{b}. In addition to the function, \codei{map} takes a list \codei{xs :: [a]} where each element have type \codei{a}, and returns another list over elements with type \codei{b}. As functions have no side effects, we can already guess what this function does: it applies the function \codei{f} to every element of a list and returns the resulting list. Looking at the second and third line, we see that this is actually what the function does. The second line states that applying the function to an empty list returns another empty list, while the third line states that, for a non-empty list, its function is applied to the element and then recursively calls itself on the reminder. In Haskell, \codei{[]} is an empty list and \codei{x:xs} is a non-empty list with the element \codei{x} as its head and the elements \codei{xs} as its tail.
+
+A function like \codei{map} operates over any type \codei{a} and \codei{b}, and has no way of inspecting what these types actually are. They could be primitive values like integers, but they could just as well be other functions that we compose with \codei{f}, a program that is repeatedly applied to a number of inputs, or 
+
+\subsection{Domain Specific Languages}
+
+\lipsum[3]
+
+\subsection{Domain Specific Embedded Languages}
+
+\lipsum[4]
 
 \chapter{Co-Design}
 

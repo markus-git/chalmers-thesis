@@ -146,11 +146,12 @@
 \lstnewenvironment{stub}{\minipage{\textwidth}}{\endminipage}
 \lstnewenvironment{ghci}{\minipage{\textwidth}\lstset{keywords={Main}}}{\endminipage}
 
+\newcommand{\codei}[1]{\lstinline[breaklines=false]{#1}}
+\newcommand{\codel}[1]{\lstinline[breaklines=true]{#1}}
 \newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\ignore}[1]{}
 
 \definecolor{cthgrey}{RGB}{204, 204, 204}
-
-\newcommand{\ignore}[1]{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Biblatex

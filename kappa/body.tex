@@ -98,7 +98,7 @@ The other piece of glue code that functional programming languages provides is o
 (.) g f x = g (f x)
 \end{code}
 
-\noindent where parenthesis around the dot implies that function composition is an infix function. 
+\noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
 
 \subsection{Domain Specific Languages}
 
@@ -111,6 +111,10 @@ Haskell, with its static type system, flexible overloading and lazy semantics, h
 Shallowly embedded languages do however perform quite poorly as a technique if we wish to compile the language since its functions return values. To compile an embedded language it is better to use an intermediate representation for its abstract syntax tree. This technique is known as a deep embedding, and lets us inspect a whole computation rather than its result. While the representation of embedded language's syntax tree can become quite unwieldy as the supported syntax grows, one is necessary if we would like to transform the representation, or if we have another back-end than compilation.
 
 In our co-design language we make use of a combination of deep and shallow embeddings, having implemented the core syntax as a deep embedding with user facing libraries as shallow embeddings. This mixture means that the core language is easy to interpret while the shallow embeddings provides a nice user interface. 
+
+\section{Embedded Programming in Haskell}
+
+\lipsum[1]
 
 \chapter{Co-Design}
 

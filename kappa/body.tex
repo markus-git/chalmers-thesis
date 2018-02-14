@@ -114,7 +114,17 @@ In our co-design language we make use of a combination of deep and shallow embed
 
 \section{Embedded Programming in Haskell}
 
-Programming in a functional language like Haskell is a bit different from the kind of imperative programming one does in C or the descriptions one writes in VHDL. Ideally, functional programming allows users to write a mathematical function, that is, a function from its inputs to its output. On the other hand, in an imperative language like C we write our programs as a series of sequential steps. Furthermore, the combinatorial style of programming one gets via function composition tends to mean data is transform in bulk operations rather than iterative loops.
+Programming in a functional language like Haskell is a bit different from the kind of imperative programming one does in C or the descriptions one writes in VHDL. Ideally, functional programming allows users to write a mathematical function, that is, a function from its inputs to its output. On the other hand, in an imperative language like C we write our programs as a series of sequential steps. Furthermore, functional programming is typically done compositionally; a rich set of operators supports the composition of new programs from smaller ones. As a result, functional programs tends to transform data in bulk operations rather than iterative loops.
+
+% As an example of the above differences, consider a finite impulse response (FIR) filter. FIR filters are one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}, where the second one is infinite impulse response (IIR) filters. The mathematical definition of a FIR filter of rank $N$ is as follows:
+
+\vspace{-2mm}
+\begin{equation}
+y_{n} = \sum_{i=0}^{N} b_{i} \cdot x_{n-i}
+\end{equation}
+\vspace{1mm}
+
+
 
 \chapter{Co-Design}
 

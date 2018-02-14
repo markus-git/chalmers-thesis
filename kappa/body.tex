@@ -108,7 +108,7 @@ DSLs comes in two fundamentally different forms: external and internal. An exter
 
 Haskell, with its static type system, flexible overloading and lazy semantics, has seen itself as host for a range of EDSLs. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language.
 
-Shallowly embedded languages do however perform quite poorly as a technique if we wish to compile the language since its functions return values. To compile an embedded language it is instead natural to use an algebraic data type to represent the abstract syntax tree of ...
+Shallowly embedded languages do however perform quite poorly as a technique if we wish to compile the language since its functions return values. To compile an embedded language it is better to use an intermediate representation for its abstract syntax tree. This technique is known as a deep embedding, and lets us inspect a whole computation rather than its result. While the representation of embedded language's syntax tree can become quite unwieldy as the supported syntax grows, one is necessary if we would like to transform the representation, or if we have another back-end than compilation.
 
 \chapter{Co-Design}
 

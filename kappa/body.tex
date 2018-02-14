@@ -110,6 +110,8 @@ Haskell, with its static type system, flexible overloading and lazy semantics, h
 
 Shallowly embedded languages do however perform quite poorly as a technique if we wish to compile the language since its functions return values. To compile an embedded language it is better to use an intermediate representation for its abstract syntax tree. This technique is known as a deep embedding, and lets us inspect a whole computation rather than its result. While the representation of embedded language's syntax tree can become quite unwieldy as the supported syntax grows, one is necessary if we would like to transform the representation, or if we have another back-end than compilation.
 
+In our co-design language we make use of a combination of deep and shallow embeddings, having implemented the core syntax as a deep embedding with user facing libraries as shallow embeddings. This mixture means that the core language is easy to interpret while the shallow embeddings provides a nice user interface. 
+
 \chapter{Co-Design}
 
 \lipsum[5]

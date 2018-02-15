@@ -158,14 +158,19 @@ double dot(int N, double *xs, double *ys)
 
 \noindent However, dot-product is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not compositional.
 
-In Haskell, functions like the dot-product can be implemented in a compositional style using two operations:
+In Haskell, functions like the dot-product can be implemented in a compositional style using two operations from its standard libraries:
 
 \begin{code}
 dot :: Num a => [a] -> [a] -> a
-dot xs ys = foldr (+) 0 (zipWith (*) xs ys)
+dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Here, \codei{zipWith} combines the two input lists by element wise multiplication, but only going as far as the shortest of the two lists. \codei{foldr} then takes the resulting list and collapses it by summing together its elements, starting with the value $0$. The type is also generalized from the C variant, as it accepts any numerical value instead of just doubles (given by the \codei{Num} constraint).
+\noindent Here, \codei{zipWith} combines the two input lists by element wise multiplication, but only going as far as the shortest of the two lists, and \codei{sum} then sums together the resulting list. The type is also generalized from the C variant, as it accepts any numerical value (given by the \codei{Num} constraint on \codei{a}) instead of just doubles.
+
+\begin{code}
+fir :: Num a => [a] -> [a]
+fir xs = 
+\end{code}
 
 \chapter{Co-Design}
 

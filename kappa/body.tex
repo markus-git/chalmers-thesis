@@ -116,15 +116,56 @@ In our co-design language we make use of a combination of deep and shallow embed
 
 Programming in a functional language like Haskell is a bit different from the kind of imperative programming one does in C or the descriptions one writes in VHDL. Ideally, functional programming allows users to write a mathematical function, that is, a function from its inputs to its output. On the other hand, in an imperative language like C we write our programs as a series of sequential steps. Furthermore, functional programming is typically done compositionally; a rich set of operators supports the composition of new programs from smaller ones. As a result, functional programs tends to transform data in bulk operations rather than iterative loops.
 
-% As an example of the above differences, consider a finite impulse response (FIR) filter. FIR filters are one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}, where the second one is infinite impulse response (IIR) filters. The mathematical definition of a FIR filter of rank $N$ is as follows:
+As an example of the above differences, we'll consider a a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have internal feedback loops and thus an infinite impulse response. The mathematical definition of a FIR filter of rank $N$ is as follows:
 
 \vspace{-2mm}
 \begin{equation}
-y_{n} = \sum_{i=0}^{N} b_{i} \cdot x_{n-i}
+y_{n} = b_{0} x_{n} + b_{1} x_{n-1} + \cdots + b_{N} x_{n-N} = \sum_{i=0}^{N} b_{i} x_{n-i}
 \end{equation}
 \vspace{1mm}
 
+\noindent where $x$ and $y$ are the input and output signals and $b_i$ is the value of the impulse response at instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'', since they ``tap'' the input signal at various instants. 
 
+In an imperative language like C, we write the FIR filter as:
+
+\begin{code}
+void fir(int N, int L, double *b, double *x, double *y)
+{
+ int j, k;
+ double v, tap[256];
+ for(j=0; j<N; j++) tap[j] = 0.0;
+ for(j=0; j<L; j++)
+ {
+  for(k=N; k>1; k--) tap[k-1] = tap[k-2];
+  tap[0] = x[j];
+  v = 0.0;
+  for(k=0; k<N; k++) v += b[k] * tap[k];
+  y[j] = y;
+ }
+}
+\end{code}
+
+\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates $v$ does so by performing a dot-product of $b$ and $tap$. Having implemented a dot-product in this manner does mean that it is specialized to the FIR filter, and any other function that needs to perform a dot-product would have to reimplement it. It is possible to extract the computation like so:
+
+\begin{code}
+double dot(int N, double *xs, double *ys)
+{
+  double sum = 0;
+  for (int i=0; i<N; i++) sum += xs[i] * ys[i];
+  return sum;
+}
+\end{code}
+
+\noindent However, dot-product is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not compositional.
+
+In Haskell, functions like the dot-product can be implemented in a compositional style using two operations:
+
+\begin{code}
+dot :: Num a => [a] -> [a] -> a
+dot xs ys = foldr (+) 0 (zipWith (*) xs ys)
+\end{code}
+
+\noindent Here, \codei{zipWith} combines the two input lists by element wise multiplication, but only going as far as the shortest of the two lists. \codei{foldr} then takes the resulting list and collapses it by summing together its elements, starting with the value $0$. The type is also generalized from the C variant, as it accepts any numerical value instead of just doubles (given by the \codei{Num} constraint).
 
 \chapter{Co-Design}
 

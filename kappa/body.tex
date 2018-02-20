@@ -229,20 +229,7 @@ Vectors, when implemented in the above manner, are an example of a shallowly emb
 
 In section~\ref{haskell} I talked about generating C code from our embedded Haskell programs, but the kind of heterogeneous computing that our library aims to describes requires cannot be described in only C. Typically, heterogeneous system see hardware code interleaved with application code, and even components described by the same language can support different intrinsic operations. So, starting with a single Haskell program, we have identified three main tasks: generate C code for the application parts, generate VHDL for the hardware parts, and generate a combination of C and VHDL to enable the transmission of data between software and hardware components. Furthermore, the software and hardware languages must be extensible, as they need to support the various intrinsic operations used throughout a system.
 
-C and VHDL are both imperative. To represent them, our co-design library builds on a deep embedding of monads. Monads can be thought of as composable computation descriptions, that is, they provide a means to connect smaller computations into a larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
-
-\begin{code}
-hello :: Software ()
-hello = printf "Hello world!\n"
-\end{code}
-
-\lipsum[2]
-
-\begin{code}
-type Software = Prog SIns SExp
-\end{code}
-
-\lipsum[3]
+C and VHDL are both imperative. To represent them, our co-design library builds on a deep embedding of monads. Monads can be thought of as composable computation descriptions, that is, they provide a means to connect smaller computations into a larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example, consider a software program for reversing an array:
 
 \begin{code}
 reverse :: SArr Int32 -> Software ()
@@ -250,7 +237,7 @@ reverse arr =
   for 0 (len `div` 2) $ \ix -> do
     aix <- getArr arr ix
     ajx <- getArr arr (len - ix)
-    setArr arr ix         ajx
+    setArr arr ix ajx
     setArr arr (len - ix) aix
   where
     len = length arr

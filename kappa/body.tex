@@ -1,5 +1,7 @@
 %!TEX root = ../main.tex
 
+% TODO: support C style lstset as well as Haskell.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %       oe    
@@ -37,13 +39,13 @@ This thesis consists of two parts. Part I is a general introduction to the field
 % Limit to FPGAs.
 
 \section{Background}
+\label{background}
 
 High demands for efficiency under resource constraints have greatly influenced the development of embedded systems used in communications infrastructure, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
 
 Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
 
-\subsection{Difficulties of heterogeneity}
-\label{issues}
+%\subsection{Difficulties of heterogeneity}
 
 While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors and accelerators are typically programmed in a low level dialect of C or assembler.  This choice of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, low level languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
 
@@ -69,11 +71,12 @@ One of the benefits of low level code is that it gives programmers fine control 
 
 \section{The Co-Design Language}
 
-Many of the issues in section~\ref{issues} that one faces in heterogenous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a seperate design decision. In imperative languages like C, this is however quite difficult to do. HDLs contrast this by assuming programs to be parallel by default.
+Many of the issues in section~\ref{background} that one faces in heterogenous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a seperate design decision. In imperative languages like C, this is however quite difficult to do. HDLs contrast this by assuming programs to be parallel by default.
 
 Issues with differences in language design between imperative languages and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
 
 \subsection{Functional Programming}
+\label{functional}
 
 Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 
@@ -110,13 +113,13 @@ Haskell, with its static type system, flexible overloading and lazy semantics, h
 
 Shallowly embedded languages do however perform quite poorly as a technique if we wish to compile the language since its functions return values. To compile an embedded language it is better to use an intermediate representation for its abstract syntax tree. This technique is known as a deep embedding, and lets us inspect a whole computation rather than its result. While the representation of embedded language's syntax tree can become quite unwieldy as the supported syntax grows, one is necessary if we would like to transform the representation, or if we have another back-end than compilation.
 
-In our co-design language we make use of a combination of deep and shallow embeddings, having implemented the core syntax as a deep embedding with user facing libraries as shallow embeddings. This mixture means that the core language is easy to interpret while the shallow embeddings provides a nice user interface. 
+\todo{In our co-design language we make use of a combination of deep and shallow embeddings, having implemented the core syntax as a deep embedding with user facing libraries as shallow embeddings. This mixture means that the core language is easy to interpret while the shallow embeddings provides a nice user interface.}
 
-\section{Embedded Programming in Haskell}
+\subsection{Embedded Programming in Haskell}
 
-Programming in a functional language like Haskell is a bit different from the kind of imperative programming one does in C or the descriptions one writes in VHDL. Ideally, functional programming allows users to write a mathematical function, that is, a function from its inputs to its output. On the other hand, in an imperative language like C we write our programs as a series of sequential steps. Furthermore, functional programming is typically done compositionally; a rich set of operators supports the composition of new programs from smaller ones. As a result, functional programs tends to transform data in bulk operations rather than iterative loops.
+Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming, where users express their program as a series of sequential steps to be executed. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones. As a result, fuctional languages tend to transform data in bulk operations rather than through iterative loops.
 
-As an example of the above differences, we'll consider a a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have internal feedback loops and thus an infinite impulse response. The mathematical definition of a FIR filter of rank $N$ is as follows:
+As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have internal feedback loops and thus an infinite impulse response. The mathematical definition of a FIR filter of rank $N$ is as follows:
 
 \vspace{-2mm}
 \begin{equation}
@@ -124,28 +127,27 @@ y_{n} = b_{0} x_{n} + b_{1} x_{n-1} + \cdots + b_{N} x_{n-N} = \sum_{i=0}^{N} b_
 \end{equation}
 \vspace{1mm}
 
-\noindent where $x$ and $y$ are the input and output signals and $b_i$ is the value of the impulse response at instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'', since they ``tap'' the input signal at various instants. 
+\noindent where $x$ and $y$ are the input and output signals and $b_i$ is the value of the impulse response at time instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'' as they tap into the input signal at various time instants. 
 
-In an imperative language like C, we write the FIR filter as:
+In an imperative language like C, we implement the FIR filter as:
 
 \begin{code}
 void fir(int N, int L, double *b, double *x, double *y)
 {
  int j, k;
- double v, tap[256];
+ double tap[256];
  for(j=0; j<N; j++) tap[j] = 0.0;
  for(j=0; j<L; j++)
  {
   for(k=N; k>1; k--) tap[k-1] = tap[k-2];
   tap[0] = x[j];
-  v = 0.0;
-  for(k=0; k<N; k++) v += b[k] * tap[k];
-  y[j] = y;
+  y[j] = 0.0;
+  for(k=0; k<N; k++) y[j] += b[k] * tap[k];
  }
 }
 \end{code}
 
-\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates $v$ does so by performing a dot-product of $b$ and $tap$. Having implemented a dot-product in this manner does mean that it is specialized to the FIR filter, and any other function that needs to perform a dot-product would have to reimplement it. It is possible to extract the computation like so:
+\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Having implemented a dot-product in this manner does mean that it is specialized to the FIR filter, and any other function that needs to perform their own dot-product would have to reimplement it. While it is possible to extract the computation like so:
 
 \begin{code}
 double dot(int N, double *xs, double *ys)
@@ -156,27 +158,77 @@ double dot(int N, double *xs, double *ys)
 }
 \end{code}
 
-\noindent However, dot-product is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not compositional.
+\noindent the function is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not readily compositional: the function cannot be merged with producers of \codei{xs} or \codei{ys} without looking at its implementation.
 
-In Haskell, functions like the dot-product can be implemented in a compositional style using two operations from its standard libraries:
+In Haskell, functions like the dot-product can be implemented in a compositional style using two operations from its standard libraries, namely \codei{zipWith} and \codei{sum}:
 
 \begin{code}
 dot :: Num a => [a] -> [a] -> a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Here, \codei{zipWith} combines the two input lists by element wise multiplication, but only going as far as the shortest of the two lists, and \codei{sum} then sums together the resulting list. The type is also generalized from the C variant, as it accepts any numerical value (given by the \codei{Num} constraint on \codei{a}) instead of just doubles.
+\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication -- \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function, the above dot-product is able to take any numerical value instead of just doubles, thanks to its \codei{Num} constraint on \codei{a}. Haskell's lazy evaluation also ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+
+Now, with the help of our dot-product, we can implement the FIR filter as well:
 
 \begin{code}
-fir :: Num a => [a] -> [a]
-fir xs = 
+fir :: Num a => [a] -> [a] -> [a]
+fir b xs = snd (mapAccumR step (replicate (length b) 0) xs)
+  where
+    step :: [a] -> a -> ([a], a)
+    step ts i = (x, dot b x)
+      where x = shift i ts
+  
+    shift :: a -> [a] -> [a]
+    shift x xs = x : init xs
 \end{code}
 
-\chapter{Co-Design}
+\noindent Here I've also factored out two additional components of the filter, namely the \codei{shift} and \codei{step} operations: \codei{shift} manages the filter's taps as it pushes a new value onto them while at the same time dropping their oldest value; \codei{step} implements the logic of the second for-loop of the C variant, that is, it shifts the current input onto the taps and then calculates the output for that time instant. As for the main filter body itself, a special mapping function called \codei{mapAccumR} is used, which is similar to the earlier \codei{map} function show in section~\ref{functional} but also carries around an extra value with it throughout the applications of \codei{step} to \codei{xs}. This extra value is used to hold the taps, and is initially a list of zeroes created by Haskell's \codei{replicate} function, but each application of \codei{step} will push an new input onto them. The final result of the filter is then obtained using \codei{snd}, which throws away the taps and returns the accumulated outputs.
 
-\lipsum[5]
+Embedded programming in Haskell is quite similar to the kind of functional programming that we have done so far. In fact, we can reimplement the earlier dot-product as an embedded function in our co-design library without having to change its definition very much at all:
 
-\section{Section about Expression}
+\begin{code}
+dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
+dot xs ys = sum (zipWith (*) xs ys)
+\end{code}
+
+\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of the co-design library, and provides operations that mimic common operations in Haskell. For example, vectors can be thought of as lists with a finite size, while expressions can be thought of as a computation that produces a regular value. It is in fact possible to evaluate an expression to a regular Haskell value:
+
+\begin{code}
+evaluateExpr :: Type a => Exp a -> a
+\end{code}
+
+\noindent as long as its an expression over some known type \codei{a} that supports evaluation, as enforced by the \codei{Type} constraint.
+
+Evaluating expressions into their matching Haskell value is however not the only supported operation, we could just as well compile the same expression to, say, its equivalent C code. These different kinds of interpretations of expressions is possible because they're an example of a deeply embedded type, and operations over them only build an interim data structure that reflects the computation behind the expression. For instance, an expression like \codei{(a * b)} could result in an abstract syntax tree of \codei{(Mult (Var ``a'') (Var ``b''))} in Haskell. It is this syntax tree that we can inspect, modify and interpret in different ways, all from within Haskell. % Compiling the dot-product function to C results in the following code being generated:
+
+The similarities between the implementations of our embedded dot-product and the earlier one are mostly superficial, as the helper functions used in the embedded variant are not the standard Haskell functions we used before, but rather functions provided by our vector library that share the same names:
+
+\begin{code}
+data Vec a = Vec (Exp Length) (Exp Index -> a)
+
+zipWith :: (Type a, Type b) => (a -> b -> c) -> Vec a -> Vec b -> Vec c
+zipWith f a b = map (uncurry f) (zip a b)
+
+sum :: (Num a, Type a) => Vec a -> a
+sum = fold (+) 0
+\end{code}
+
+\noindent What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
+
+Vectors, when implemented in the above manner, are an example of a shallowly embedded data type. Its no coincident that the definition of vectors is similar to their \todo{semantics}, as the very idea of shallow embeddings is that the representation they use model the operations that can be performed on them. This characteristic of shallow embeddings makes it \todo{easy} to add new language constructs, like a \codei{mapAccum} for vectors, but also makes them difficult to interpret in any other way than the intended one. To get around this issue, vectors are based on the deeply embedded \codei{Exp} type, and can be interpreted as one big expression. Compiling the embedded dot-product to C yields the following code:
+
+\begin{code}
+-- todo: compile dot-product to C and past code here.
+\end{code}
+
+\todo{Text that has to be here or my latex stops working.}
+
+\section{Co-Design}
+
+\lipsum[1]
+
+\subsection{Section about Expression}
 
 \lipsum[1]
 
@@ -210,37 +262,7 @@ pair (a, b) (u, v) = (a + b) * (u + v)
 
 \lipsum[1]
 
-\begin{code}
-dotProd :: (Expr exp, Type' exp a, Num a) => Pull exp a -> Pull exp a -> exp a
-dotProd xs ys = forLoop n 0 $ \i s -> s + xs!i * ys!i
-  where
-    n = min (length xs) (length ys)
-\end{code}
-
-\lipsum[1]
-
-\begin{stub}
-forLoop :: Syntax exp st => exp Length -> st -> (exp Index -> st -> st) -> st
-\end{stub}
-
-\lipsum[1]
-
-\begin{code}
-zipWith :: Expr exp => (a -> b -> c) -> Pull exp a -> Pull exp b -> Pull exp c
-zipWith f xs ys = fmap (uncurry f) (zip xs ys)
-
-sum :: (Expr exp, Type' exp a, Num a) => Pull exp a -> exp a
-sum = fold (+) 0
-\end{code}
-
-\lipsum[1]
-
-\begin{code}
-scProd :: (Expr exp, Type' exp a, Num a) => Pull exp a -> Pull exp a -> exp a
-scProd a b = sum (zipWith (*) a b)
-\end{code}
-
-\section{Section about Programs}
+\subsection{Section about Programs}
 
 \lipsum[1]
 
@@ -301,7 +323,7 @@ reverse :: (Arrays m, Expr (Exp m), Type' (Exp m) Int32) =>
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\chapter{Concluding Remarks}
+\chapter{Concluding Remarksz}
 \label{ch:conc}
 
 \lipsum

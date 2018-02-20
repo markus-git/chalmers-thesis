@@ -222,11 +222,51 @@ Vectors, when implemented in the above manner, are an example of a shallowly emb
 -- todo: compile dot-product to C and past code here.
 \end{code}
 
-\todo{Text that has to be here or my latex stops working.}
+\todo{Text that has to be here or my latex stops working. By the way, the text above this might not be super relevant for this section.}
 
 \section{Co-Design}
 
 \lipsum[1]
+
+\begin{code}
+hello :: Software ()
+hello = printf "Hello world!\n"
+\end{code}
+
+\lipsum[2]
+
+\begin{code}
+type Software = Prog SIns SExp
+\end{code}
+
+\lipsum[3]
+
+\begin{code}
+reverse :: SArr Int32 -> Software ()
+reverse arr =
+  for 0 (len `div` 2) $ \ix -> do
+    aix <- getArr arr ix
+    ajx <- getArr arr (len - ix)
+    setArr arr ix         ajx
+    setArr arr (len - ix) aix
+  where
+    len = length arr
+\end{code}
+
+\lipsum[4]
+
+\begin{stub}
+reverse :: HArr Int32 -> Hardware ()
+\end{stub}
+
+\lipsum[5]
+
+\begin{stub}
+reverse :: (Arrays m, Expr (Exp m), Type' (Exp m) Int32) =>
+  Arr m (Exp m Int32) -> m ()
+\end{stub}
+
+Text.
 
 \subsection{Section about Expression}
 
@@ -256,56 +296,11 @@ square a = a * a
 \begin{code}
 type Point a = (a, a)
 
-pair :: (Expr exp, Type' exp a, Num a) => Point (exp a) -> Point (exp a) -> exp a
-pair (a, b) (u, v) = (a + b) * (u + v)
+swap :: Point (exp a) -> Point (exp a)
+swap (a, b) = (b, a)
 \end{code}
 
 \lipsum[1]
-
-\subsection{Section about Programs}
-
-\lipsum[1]
-
-\begin{code}
-hello :: Software ()
-hello = printf "Hello world!\n"
-\end{code}
-
-\lipsum[2]
-
-\begin{code}
-hello :: Software ()
-hello = printf "Hello world!\n"
-\end{code}
-
-\lipsum[3]
-
-\begin{code}
-reverse :: SArr Int32 -> Software ()
-reverse arr =
-  do for 0 (len `div` 2) $ \ix ->
-       do aix <- getArr arr ix
-          ajx <- getArr arr (len - ix)
-          setArr arr ix         ajx
-          setArr arr (len - ix) aix
-  where
-    len = length arr
-\end{code}
-
-\lipsum[4]
-
-\begin{stub}
-reverse :: HArr Int32 -> Hardware ()
-\end{stub}
-
-\lipsum[5]
-
-\begin{stub}
-reverse :: (Arrays m, Expr (Exp m), Type' (Exp m) Int32) =>
-  Arr m (Exp m Int32) -> m ()
-\end{stub}
-
-\lipsum[6]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -326,4 +321,4 @@ reverse :: (Arrays m, Expr (Exp m), Type' (Exp m) Int32) =>
 \chapter{Concluding Remarksz}
 \label{ch:conc}
 
-\lipsum
+\lipsum[1]

@@ -116,6 +116,7 @@ Shallowly embedded languages do however perform quite poorly as a technique if w
 \todo{In our co-design language we make use of a combination of deep and shallow embeddings, having implemented the core syntax as a deep embedding with user facing libraries as shallow embeddings. This mixture means that the core language is easy to interpret while the shallow embeddings provides a nice user interface.}
 
 \subsection{Embedded Programming in Haskell}
+\label{haskell}
 
 Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming, where users express their program as a series of sequential steps to be executed. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones. As a result, fuctional languages tend to transform data in bulk operations rather than through iterative loops.
 
@@ -226,7 +227,7 @@ Vectors, when implemented in the above manner, are an example of a shallowly emb
 
 \section{Co-Design}
 
-\lipsum[1]
+In section~\ref{haskell} I talked about generating C code from our embedded Haskell programs, but the kind of heterogeneous computing that our library aims to describes requires more than just C programs. Typically, heterogeneous system see hardware code interleaved with application code, and even components described by the same language can support different intrinsic operations. So, starting with a single Haskell program, we have identified three main tasks: generate C code for the application parts, generate VHDL for the hardware parts, and generate a combination of C and VHDL to enable the transmission of data between software and hardware components. Furthermore, the software and hardware languages must be extensible, to support different intrinsic operations.
 
 \begin{code}
 hello :: Software ()

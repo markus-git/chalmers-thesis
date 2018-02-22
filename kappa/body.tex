@@ -366,15 +366,13 @@ axi_light :: HComp a -> HSig (
   -> ())
 \end{code}
 
-There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions). The resulting hardware signature can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical component which can be put onto the FPGA.
-
-
+There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions). The resulting hardware signature can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical component which can be put onto the FPGA. Then, after getting the components physical address on the FPGA, we use memory-mapped I/O to access it from software:
 
 \begin{code}
 mmap :: String -> HSig a -> Software (SComp (Soften a))
 \end{code}
 
-Text.
+\noindent which turns the hardware signature into a software one that we can then call as a regular function. As for the softening of \codei{a}, the hardware signature still expects signals, so those are turned into references instead.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

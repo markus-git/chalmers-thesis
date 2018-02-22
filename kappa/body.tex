@@ -338,7 +338,41 @@ The ability to write software, hardware and generic programs that our co-design 
 
 Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no need for such advanced features. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
 
-% Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. We introduce these channels from the processor's perspective.
+Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. We introduce these channels from the processor's perspective. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Signals and process are both supported by our co-design library, and the whole AXI4-lite interface can in fact be implemented within the library. A function that takes a hardware program and hooks it up to an AXI4-lite interconnect is provided by the library:
+
+\begin{code}
+axi_light :: HComp a -> HSig (
+     Signal Bit       -- ^ Global clock signal.
+  -> Signal Bit       -- ^ Global reset signal.
+  -> Signal (Bits 32) -- ^ Write address.
+  -> Signal (Bits 3)  -- ^ Write channel protection type.
+  -> Signal Bit       -- ^ Write address valid.
+  -> Signal Bit       -- ^ Write address ready.
+  -> Signal (Bits 32) -- ^ Write data.
+  -> Signal (Bits 4)  -- ^ Write strobes.
+  -> Signal Bit       -- ^ Write valid.
+  -> Signal Bit       -- ^ Write ready.
+  -> Signal (Bits 2)  -- ^ Write response.
+  -> Signal Bit       -- ^ Write response valid.
+  -> Signal Bit       -- ^ Response ready.
+  -> Signal (Bits 32) -- ^ Read address.
+  -> Signal (Bits 3)  -- ^ Protection type.
+  -> Signal Bit       -- ^ Read address valid.
+  -> Signal Bit       -- ^ Read address ready.
+  -> Signal (Bits 32) -- ^ Read data.
+  -> Signal (Bits 2)  -- ^ Read response.
+  -> Signal Bit       -- ^ Read valid.
+  -> Signal Bit       -- ^ Read ready.    
+  -> ())
+\end{code}
+
+There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions). The resulting hardware signature can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical component which can be put onto the FPGA.
+
+
+
+\begin{code}
+mmap :: String -> HSig a -> Software (SComp (Soften a))
+\end{code}
 
 Text.
 

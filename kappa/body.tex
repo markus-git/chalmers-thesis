@@ -226,6 +226,7 @@ Vectors, when implemented in the above manner, are an example of a shallowly emb
 \todo{Text that has to be here or my latex stops working. By the way, the text above this might not be super relevant for this section.}
 
 \section{Co-Design}
+\label{codesign}
 
 In section~\ref{haskell} I talked about generating C code from our embedded Haskell programs, but for the kind of heterogeneous computing that our library aims to describes only C is not sufficient. Typically, heterogeneous system see hardware code interleaved with application code, and even components described by the same language can support different intrinsic operations. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the application parts, generate VHDL for the hardware parts, and generate a combination of C and VHDL to enable the transmission of data between software and hardware components. Furthermore, the software and hardware languages are extensible to support the addition of various intrinsic operations for different components.
 
@@ -251,7 +252,7 @@ While the type of \codei{reverseS} is that of a software function, there's nothi
 
 \begin{code}
 reverseH :: HArr Int32 -> Hardware ()
-reverseH arr = undefined -- same as before
+reverseH arr = undefined -- same as before.
 \end{code}
 
 \noindent Other than its type, \codei{reverseH} has the same implementation as \codei{reverseS}.
@@ -259,8 +260,8 @@ reverseH arr = undefined -- same as before
 Being able to implement both \codei{reverseS} and \codei{reverseH} using the same functions hints that us marking them as software and hardware specific programs was unnecessary. We would be better of keeping the reverse function generic, enabling it do be used in both languages. After all, the function only require its implementer to support for-loops and arrays to use it. The co-design library supports this kind of language agnostic functions by employing a hierarchy of type classes over operations like arrays or for-loops, with monads as the base. In the case of our reverse function, we would give it the following type:
 
 \begin{code}
-reverse :: (Monad m, Arrays m, Control m) => Arr m Int32 -> m ()
-reverse arr = undefined -- same as before
+reverse :: (Monad m, Arrays m, Control m, Type m Int32) => Arr m Int32 -> m ()
+reverse arr = undefined -- same as before.
 \end{code}
 
 The previous array types of \codei{SArr} and \codei{HArr} have been substituted for a more general type of \codei{Arr}, which is parameterized on the monad \codei{m}. The idea is that, a type of \codei{Arr} will turn into a \codei{SArr} or \codei{HArr} type when the monad is instantiated as \codei{Software} or \codei{Hardware}, respectively. The added constraints of \codei{Arrays} and \codei{Control} on \codei{m} ensures that whichever monad \codei{m} gets instantiated as will support the necessary array and control operations.
@@ -275,36 +276,45 @@ While \codei{Software} and \codei{Hardware} both support the previous stack oper
 %  setArr  :: SyntaxM m a => Arr m a -> Exp m Index -> a -> m ()
 %\end{code}
 
-\subsection{Section about Expression}
+\subsection{Expressions}
 
-\lipsum[1]
+A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a value:
 
 \begin{code}
-square :: SExp Int32 -> SExp Int32
+squareS :: SExp Int32 -> SExp Int32
+squareS a = a * a
+\end{code}
+
+\noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$.
+
+Expressions are however a deeply embedded type, and evaluation is not the only interpretation that they support. For instance, looking at the type of \codei{square} we see that its a function from a software expression over 32-bit integers to another expressions of the same type. Software expressions like this, when used in software programs, can also be compiled to C. Like the software programs from section~\ref{codesign} have a corresponding type for hardware programs, \codei{SExp} also has a corresponding hardware type for expressions called \codei{HExp}. The squaring function can be implemented using hardware expressions by simply changing its type:
+
+\begin{stub}
+squareH :: HExp Int32 -> HExp Int32
+squareH a = a * a
+\end{stub}
+
+Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. There is no software or hardware specific characteristics in the squaring function, its expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations:
+
+\begin{code}
+square :: (Num (exp a), Type' exp a) => exp a -> exp a
 square a = a * a
 \end{code}
 
-\lipsum[1]
+\noindent Note that the type constraint is slightly different from previous functions, as it makes us of \codei{Type'} instead of \codei{Type}. The former type constraint is designed for functions are parameterized on their expression type, while the latter is used with monads.
 
-\begin{stub}
-square :: HExp Int32 -> HExp Int32
-square a = a * a
-\end{stub}
-
-\lipsum[1]
-
-\begin{stub}
-square :: (Multiplicative exp, Type' exp a, Num a) => exp a -> exp a
-square a = a * a
-\end{stub}
-
-\lipsum[1]
+In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, expressions can have a composite type of smaller, andIn simple settings, the resulting value is usually one of various primitive types, such as numerical, string, and logical; in more elaborate expressions, it can be a complex data type. For instance, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
 
 \begin{code}
-type Point a = (a, a)
+swap :: SExp (a, b) -> SExp (b, a)
+swap a = pair (fst a) (snd a)
+\end{code}
 
-swap :: Point (exp a) -> Point (exp a)
-swap (a, b) = (b, a)
+\noindent \codei{swap} is true to its name and swaps places of the first element of the pair with the second element. It does so with the help of \codei{fst} and \codei{snd}, which model the similarly named function in standard Haskell and extracts the first and second elements of a pair, respectively. The third function, \codei{pair}, takes the two elements and constructs a new pair.
+
+\begin{code}
+swap2 :: (SExp a, SExp b) -> (SExp b, SExp a)
+swap2 (a, b) = (b, a)
 \end{code}
 
 \lipsum[1]

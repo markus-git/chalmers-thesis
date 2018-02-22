@@ -1,6 +1,8 @@
 %!TEX root = ../main.tex
 
-% TODO: support C style lstset as well as Haskell.
+% TODO:
+%  - support C style lstset as well as Haskell.
+%  - test new examples.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -306,18 +308,39 @@ square a = a * a
 In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, expressions can have a composite type of smaller, andIn simple settings, the resulting value is usually one of various primitive types, such as numerical, string, and logical; in more elaborate expressions, it can be a complex data type. For instance, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
 
 \begin{code}
-swap :: SExp (a, b) -> SExp (b, a)
-swap a = pair (fst a) (snd a)
+dist :: (SExp Float, SExp Float) -> (SExp Float, SExp Float) -> SExp Float
+dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
+  where
+    dx = x1 - x2
+    dy = y1 - y2
 \end{code}
 
-\noindent \codei{swap} is true to its name and swaps places of the first element of the pair with the second element. It does so with the help of \codei{fst} and \codei{snd}, which model the similarly named function in standard Haskell and extracts the first and second elements of a pair, respectively. The third function, \codei{pair}, takes the two elements and constructs a new pair.
+\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. In order to compile \codei{dist}, we need to get its input from somewhere and do something with its output. A convenient way to do this in software is to use its \codei{fget} function to read standard input, \codei{stdin}, and \codei{printf} to writes the output out into standard output.
 
 \begin{code}
-swap2 :: (SExp a, SExp b) -> (SExp b, SExp a)
-swap2 (a, b) = (b, a)
+distProg :: Software ()
+distProg = do
+  a <- fget stdin
+  b <- fget stdin
+  printf "dist: %d\n" (dist (a, b) (b, a))
 \end{code}
 
-\lipsum[1]
+Compiling \codei{distProg} produces the following code:
+
+\begin{code}
+\end{code}
+
+\noindent Note that there are no pairs in the generated C code, as the different coordinates simply become four separate references to the two input variables.
+
+\subsection{Transmission}
+
+The ability to write software, hardware and generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 interconnect.
+
+Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no need for such advanced features. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
+
+% Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. We introduce these channels from the processor's perspective.
+
+Text.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -335,7 +358,8 @@ swap2 (a, b) = (b, a)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\chapter{Concluding Remarksz}
+\chapter{Concluding Remarks}
 \label{ch:conc}
 
-\lipsum[1]
+Text.
+

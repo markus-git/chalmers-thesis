@@ -407,11 +407,16 @@ Lightweight Modular Staging (LMS) has also been explored as an option to ease th
 
 Outside the domain of HLS, examples of DSLs with similar ambitions to ours include the Cryptol DSL for cryptography~\cite{cryptol} and Microsoft's Accelerator~\cite{accelerator} for programming GPUs and various other platforms---although the latest versions of Cryptol no longer support hardware generation.
 
-The signal processing is based on the synchronous data-flow paradigm and is inspired by similar languages from this domain. Of the synchronous languages, Lucid Synchrone~\cite{pouzet2006, colaco2004} is perhaps our biggest inspiration and it is designed to be used with reactive systems. Initially, the language was introduced as an extension of LUSTRE~\cite{hu1998}, and extended the language with new and powerful features. For instance, automatic clock and type inference were introduced and a limited form of higher-order functions was added. Lucid Synchrone is however a standalone language, and thus cannot be easily integrated with EDSLs such as our co-design library. Z{\'e}lus~\cite{HSCC2013}, a successor of Lucid Synchrone, has shown that synchronous languages can be extended to model hybrid systems as well, that is, system which consist of both continuous and discrete components.
+The signal processing is based on the synchronous data-flow paradigm and is inspired by similar languages from this domain. Of the synchronous languages, Lucid Synchrone~\cite{pouzet2006, colaco2004} is perhaps our biggest inspiration and it is designed to be used with reactive systems. Initially, the language was introduced as an extension of LUSTRE~\cite{hu1998}, and extended the language with new and powerful features. For instance, automatic clock and type inference were introduced and a limited form of higher-order functions was added. Lucid Synchrone is however a standalone language, and thus cannot be easily integrated with EDSLs such as our co-design library. Z{\'e}lus~\cite{zelus2013}, a successor of Lucid Synchrone, has shown that synchronous languages can be extended to model hybrid systems as well, that is, system which consist of both continuous and discrete components.
 
 Another, and rather different approach to modeling signal processing is functional reactive programming. Yampa~\cite{yampa2003} is one member of this paradigm, and is used for programming hybrid systems. At its core, functional reactive programming is about describing a system's behaviors and events, where behaviors are continuous and time-varying, reactive values, and events are time-ordered sequences of discrete-time event occurrences~\cite{nilsson2002}. 
 
 Apart from the different notions of time in synchronous data-flow and functional reactive programming, the idea behind behaviors are quite similar to the signals used in synchronous language. An event is usually a separate entity, modeling the control flow of a system. Some languages do, however, merge the two concepts, by describing events in terms of behaviors. This unification comes at a cost of some elegance, as behaviors can now be discrete, but it also means that it is possible to model such systems with only data flow.
+
+\section{Discussion}
+\label{disc}
+
+Text.
 
 \section{Concluding Remarks}
 \label{conc}

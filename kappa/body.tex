@@ -279,6 +279,7 @@ While \codei{Software} and \codei{Hardware} both support the previous stack oper
 %\end{code}
 
 \subsection{Expressions}
+\label{expr}
 
 A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a value:
 
@@ -411,12 +412,20 @@ The signal processing is based on the synchronous data-flow paradigm and is insp
 
 Another, and rather different approach to modeling signal processing is functional reactive programming. Yampa~\cite{yampa2003} is one member of this paradigm, and is used for programming hybrid systems. At its core, functional reactive programming is about describing a system's behaviors and events, where behaviors are continuous and time-varying, reactive values, and events are time-ordered sequences of discrete-time event occurrences~\cite{nilsson2002}. 
 
-Apart from the different notions of time in synchronous data-flow and functional reactive programming, the idea behind behaviors are quite similar to the signals used in synchronous language. An event is usually a separate entity, modeling the control flow of a system. Some languages do, however, merge the two concepts, by describing events in terms of behaviors. This unification comes at a cost of some elegance from behaviors being discrete rather than continuous.
+Apart from the different notions of time in synchronous data-flow and functional reactive programming, the idea behind behaviors are quite similar to the signals used in synchronous language. An event is usually a separate entity, modeling the control flow of a system. Some languages do, however, merge the two concepts at a cost of some elegance by having discrete behaviors, but in return they can describe events in terms of behaviors.
 
 \section{Discussion}
 \label{disc}
 
-Text.
+Whether measured in the number of operations per seconds a system can handle or its power management size, performance is perhaps the most important feature of embedded systems. Since a embedded system is dedicated to a specific task, developers can optimize it to increase performance. To do so, they take advantage of the low-level intrinsics of the system, often by using a equally low-level programming language. However, this reliance on low-level characteristics of a system also has the unfortunate side-effect of restricting programs to the systems they're initially written for.
+
+Low-level languages provide little in the way of abstractions to address the above modularity problems. In a heterogeneous programming setting, this problem is aggravated as several programming languages are used to describe the different components of a system. Each of these languages could potentially have their own set of intrinsics operations, or even belong to different programming paradigms.
+
+This thesis presents our first steps towards a system in which the entire design process of a heterogeneous system. However, instead of taking on the challenge of heterogeneous system design head on, we are currently exploring a more modest approach; develop a library, embedded in Haskell, for hardware-software co-design, and see how far we can get. The co-design library introduced in this thesis is designed with this goal in mind, and provides a means to write a mixture of software and hardware functions, with a reasonable degree of control over the generated C and VHDL code. Being embedded in Haskell, we exploit its parametric polymorphism to facilitate functions that can be interpreted in software and hardware. This in turn allows the exploration to decide where the boundary between hardware and software should be, to be done entirely in Haskell.
+
+The co-design library is modular in the sense that new instructions and interpretations can be added with relatively little disturbance to the existing system, allowing the library to be used in the development of new languages or simply to extend the current software and hardware language with new intrinsic operations. The library is also modular from the users perspective, as they can write generic code through the use of free abstractions. For instance, the pairs used in section~\ref{expr} let us treat a point in space as a pair of coordinates, and when compiled, had completely disappeared. These pair are an example of a shallowly embedded type, and when paired with a translation into the deeply embedded core language, present a type of abstraction that only resides in Haskell. It is also possible to derive new combinators from existing ones.
+
+% .. , and at times opposing, ..
 
 \section{Concluding Remarks}
 \label{conc}

@@ -434,5 +434,8 @@ We intend to further build up the signal library by taking inspiration from rela
 \section{Concluding Remarks}
 \label{conc}
 
-Text.
+The co-design library is based on a combination of shallowly and deeply embedded types, which makes the library modular. Furthermore, the software and hardware languages embedded within the library has been made extensible, to support dialects intended for different components. Both languages are also based on the same representation of imperative programs, which is parameterized on the language's instruction set, and their expression and predicate types. So, with the help of this program type, users wishing to define a new imperative language only have to give an implementation of these three types. They get the rest for free.
 
+Hardware and software programs are designed to both be languages with predictable performance, where the translation between design and source code transparent and easy to influence. For example, the monadic style of memory management is used in favor of high-level synthesis, which can have results that are difficult to predict. Testing of software programs is supported through a variety of interpretation functions, one of which compares the result of running the generated C code with the result of Haskell function---which lets us compare a software program to a model implementation in Haskell. For hardware programs, we currently rely on performing simulation and testing in an external synthesis tool.
+
+The signal library is based on a deeply embedded type, representing the core operations in synchronous data-flow programming. Type classes are used to lift standard Haskell operations to operate point-wise over streams, letting the library retain much of the elegance and modularity of traditional functional programming.

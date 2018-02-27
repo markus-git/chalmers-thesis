@@ -120,9 +120,11 @@ The benefits of shallow and deeply embedded are both attractive to have for an E
 \subsection{Embedded Programming in Haskell}
 \label{haskell}
 
-Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming where users express their program as a series of sequential steps to be executed on some machine. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones. % Functional languages as a result tend to transform data in bulk operations rather than through iterative loops.
+Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming where users express their program as a series of sequential steps to be executed on some machine. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
 
-As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have internal feedback loops and thus an infinite impulse response. The mathematical definition of a FIR filter of rank $N$ is as follows:
+As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. The mathematical definition of a FIR filter of rank $N$ is as follows:
+
+% This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have an infinite impulse response. 
 
 \vspace{-2mm}
 \begin{equation}
@@ -130,9 +132,9 @@ y_{n} = b_{0} x_{n} + b_{1} x_{n-1} + \cdots + b_{N} x_{n-N} = \sum_{i=0}^{N} b_
 \end{equation}
 \vspace{1mm}
 
-\noindent where $x$ and $y$ are the input and output signals and $b_i$ is the value of the impulse response at time instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'' as they tap into the input signal at various time instants. 
+\noindent where $x$ and $y$ are the input and output signals, respectively, and $b_i$ is the value of the impulse response at time instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'' as they tap into the input signal at various time instants. 
 
-In an imperative language like C, we implement the FIR filter as:
+In an imperative language like C, we can implement the FIR filter as:
 
 \begin{code}
 void fir(int N, int L, double *b, double *x, double *y)
@@ -150,7 +152,7 @@ void fir(int N, int L, double *b, double *x, double *y)
 }
 \end{code}
 
-\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Having implemented a dot-product in this manner does mean that it is specialized to the FIR filter, and any other function that needs to perform their own dot-product would have to reimplement it. While it is possible to extract the computation like so:
+\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
 
 \begin{code}
 double dot(int N, double *xs, double *ys)
@@ -161,16 +163,16 @@ double dot(int N, double *xs, double *ys)
 }
 \end{code}
 
-\noindent the function is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not readily compositional: the function cannot be merged with producers of \codei{xs} or \codei{ys} without looking at its implementation.
+\noindent the function is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not readily compositional since the function cannot be merged with the producers of \codei{xs} or \codei{ys} without looking at its implementation.
 
-In Haskell, functions like the dot-product can be implemented in a compositional style using two operations from its standard libraries, namely \codei{zipWith} and \codei{sum}:
+In Haskell, functions like the dot-product can be implemented in a compositional style by using two operations from its standard libraries, namely \codei{zipWith} and \codei{sum}:
 
 \begin{code}
 dot :: Num a => [a] -> [a] -> a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication -- \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function, the above dot-product is able to take any numerical value instead of just doubles, thanks to its \codei{Num} constraint on \codei{a}. Haskell's lazy evaluation also ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication -- \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
 
 Now, with the help of our dot-product, we can implement the FIR filter as well:
 
@@ -186,26 +188,26 @@ fir b xs = snd (mapAccumR step (replicate (length b) 0) xs)
     shift x xs = x : init xs
 \end{code}
 
-\noindent Here I've also factored out two additional components of the filter, namely the \codei{shift} and \codei{step} operations: \codei{shift} manages the filter's taps as it pushes a new value onto them while at the same time dropping their oldest value; \codei{step} implements the logic of the second for-loop of the C variant, that is, it shifts the current input onto the taps and then calculates the output for that time instant. As for the main filter body itself, a special mapping function called \codei{mapAccumR} is used, which is similar to the earlier \codei{map} function show in section~\ref{functional} but also carries around an extra value with it throughout the applications of \codei{step} to \codei{xs}. This extra value is used to hold the taps, and is initially a list of zeroes created by Haskell's \codei{replicate} function, but each application of \codei{step} will push an new input onto them. The final result of the filter is then obtained using \codei{snd}, which throws away the taps and returns the accumulated outputs.
+\noindent We have also factored out two additional components of the filter, namely the \codei{shift} and \codei{step} operations: \codei{shift} manages the filter's taps as it pushes a new value onto them while at the same time dropping their oldest value; \codei{step} implements the logic of the second for-loop of the C variant, that is, it shifts the current input onto the taps and then calculates the output for that time instant. As for the main filter body itself, a special mapping function called \codei{mapAccumR} is used, which is similar to the earlier \codei{map} function show in section~\ref{functional} but also carries around an extra value throughout its applications of \codei{step} to the inputs \codei{xs}. I used this extra value to hold the filter's taps, which are initially a list of zeroes created by Haskell's \codei{replicate} function. Each application of \codei{step} then pushes an new input onto the taps. The result of the filter is obtained using \codei{snd}, which throws away the taps and returns only the accumulated outputs.
 
 Embedded programming in Haskell is quite similar to the kind of functional programming that we have done so far. In fact, we can reimplement the earlier dot-product as an embedded function in our co-design library without having to change its definition very much at all:
 
 \begin{code}
-dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
+dot :: (Num a, Type a) => Vec a -> Vec a -> Exp a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of the co-design library, and provides operations that mimic common operations in Haskell. For example, vectors can be thought of as lists with a finite size, while expressions can be thought of as a computation that produces a regular value. It is in fact possible to evaluate an expression to a regular Haskell value:
+\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, vectors can be thought of as lists with a finite size, while expressions can be thought of as a computation that produces a regular value. The latter analogy is especially true, as it is possible to evaluate expressions into their equivalent value in Haskell:
 
 \begin{code}
-evaluateExpr :: Type a => Exp a -> a
+evaluateExp :: Type a => Exp a -> a
 \end{code}
 
-\noindent as long as its an expression over some known type \codei{a} that supports evaluation, as enforced by the \codei{Type} constraint.
+\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This constraint is enforced by the \codei{Type} class, which is really a collection of constraints of smaller constraints, which ensures \codei{a} part of the set of types we can represent---such as boolean or numerical types.
 
-Evaluating expressions into their matching Haskell value is however not the only supported operation, we could just as well compile the same expression to, say, its equivalent C code. These different kinds of interpretations of expressions is possible because they're an example of a deeply embedded type, and operations over them only build an interim data structure that reflects the computation behind the expression. For instance, an expression like \codei{(a * b)} could result in an abstract syntax tree of \codei{(Mult (Var ``a'') (Var ``b''))} in Haskell. It is this syntax tree that we can inspect, modify and interpret in different ways, all from within Haskell. % Compiling the dot-product function to C results in the following code being generated:
+Evaluating expressions into their matching Haskell value is however not the only supported interpretation. In fact, we could just as well have compiled the same expression to, say, its equivalent C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} builds an interim data structure that reflects the computation behind the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what allows the compiler to inspect, modify and, ultimately, generate code from an expression.
 
-The similarities between the implementations of our embedded dot-product and the earlier one are mostly superficial, as the helper functions used in the embedded variant are not the standard Haskell functions we used before, but rather functions provided by our vector library that share the same names:
+The similarities between the implementations of our embedded dot-product and the earlier one are mostly superficial, as the helper functions used in the embedded variant are not the standard Haskell functions used before, but rather functions provided by our vector library that share the same names.
 
 \begin{code}
 data Vec a = Vec (Exp Length) (Exp Index -> a)

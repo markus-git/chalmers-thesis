@@ -21,6 +21,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Introduction}
+\label{intro}
 
 Embedded systems are, in brief, any computer system that is part of a larger system but relies on its own microprocessor. It is embeddde as part of a larger machine to sovle a particular task, and often does so under memory and real-time constraints. Embedded systems have been have been around for decades, and still control many devices in common use today~\cite{barr2006}. For example, modern cars contain a number of embedded systems, each controlling a small function of the car; one system might control the brakes, while another displays information to the dashboard. In most cases, these embedded sub-systems are all connected together in a network. 
 
@@ -40,21 +41,6 @@ This thesis consists of two parts. Part I is a general introduction to the field
 
 % Limit to FPGAs.
 
-\section{Background}
-\label{background}
-
-High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
-
-Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
-
-While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors and accelerators are programmed in a low level dialect of C or assembler. The use of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, such languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
-
-Furthermore, in the design of a heterogeneous systems there's also concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
-
-One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component. In heterogeneous system design, the developer must specify both hardware and software parts, and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is a major undertaking.
-
-\todo{Work in bits about signal processing.}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %   .--~*teu.
@@ -71,13 +57,26 @@ One of the benefits of low level code is that it gives programmers fine control 
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{The Co-Design Language}
+\chapter{Background}
+\label{background}
 
-Many of the issues in section~\ref{background} that one faces in heterogeneous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a separate design decision. In imperative languages like C, this is however quite difficult to do. On the other hand, HDLs assume programs are parallel by default, and extra care has to be taken when ordering operations.
+High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
+
+Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
+
+While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors and accelerators are programmed in a low level dialect of C or assembler. The use of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, such languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
+
+Furthermore, in the design of a heterogeneous systems there's also concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
+
+One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component. In heterogeneous system design, the developer must specify both hardware and software parts, and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is a major undertaking.
+
+\todo{Work in bits about signal processing.}
+
+Many of the issues faced in heterogeneous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a separate design decision. In imperative languages like C, this is however quite difficult to do. On the other hand, HDLs assume programs are parallel by default, and extra care has to be taken when ordering operations.
 
 Issues with differences in language design between imperative languages and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
 
-\subsection{Functional Programming}
+\section{Functional Programming}
 \label{functional}
 
 Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
@@ -105,7 +104,7 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
 
-\subsection{Domain Specific Languages}
+\section{Domain Specific Languages}
 
 A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and captures the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. Both use a language that is specialized to the particular task they have at hand, and both build programs in a form that is familiar to regular programmers; VHDL and JavaScript are both examples of a DSL.
 
@@ -117,7 +116,7 @@ Shallowly embedded languages do however perform quite poorly if we wish to compi
 
 The benefits of shallow and deeply embedded are both attractive to have for an EDSL, in the sense that a shallow embedding can add new language features while a deep embedding supports multiple interpretations. While the implementation of these two types of embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we do in fact make use of a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. % This mixture of deep and shallow means that our core language is easy to interpret while the shallow embeddings provides a nice user interface.
 
-\subsection{Embedded Programming in Haskell}
+\section{Embedded Programming in Haskell}
 \label{haskell}
 
 Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming where users express their program as a series of sequential steps to be executed on some machine. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
@@ -193,7 +192,7 @@ fir b xs = snd (mapAccumR step (replicate (length b) 0) xs)
 Embedded programming in Haskell is quite similar to the kind of functional programming that we have done so far. In fact, we can reimplement the earlier dot-product as an embedded function in our co-design library without having to change its definition very much at all:
 
 \begin{code}
-dot :: (Num a, Type a) => Vec a -> Vec a -> Exp a
+dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
@@ -227,9 +226,25 @@ Vectors, when implemented in the above manner, are an example of a shallowly emb
 -- todo: compile dot-product to C and past code here.
 \end{code}
 
-\todo{Text that has to be here or my latex stops working. By the way, the text above this might not be super relevant for this section.}
+Comments about the code.
 
-\section{Co-Design}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   .x~~"*Weu.
+%  d8Nu.  9888c
+%  88888  98888
+%  "***"  9888%
+%       ..@8*"
+%    ````"8Weu
+%   ..    ?8888L
+% :@88N   '8888N
+% *8888~  '8888F
+% '*8"`   9888%
+%   `~===*%"`
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Co-Design}
 \label{codesign}
 
 In section~\ref{haskell} I talked about generating C code from our embedded Haskell programs, but for the kind of heterogeneous computing that our library aims to describes only C is not sufficient. Typically, heterogeneous system see hardware code interleaved with application code, and even components described by the same language can support different intrinsic operations. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the application parts, generate VHDL for the hardware parts, and generate a combination of C and VHDL to enable the transmission of data between software and hardware components. Furthermore, the software and hardware languages are extensible to support the addition of various intrinsic operations for different components.
@@ -280,7 +295,7 @@ While \codei{Software} and \codei{Hardware} both support the previous stack oper
 %  setArr  :: SyntaxM m a => Arr m a -> Exp m Index -> a -> m ()
 %\end{code}
 
-\subsection{Expressions}
+\section{Embedded Expressions}
 \label{expr}
 
 A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a value:
@@ -335,7 +350,7 @@ Compiling \codei{distProg} produces the following code:
 
 \noindent Note that there are no pairs in the generated C code, as the different coordinates simply become four separate references to the two input variables.
 
-\subsection{Transmission}
+\section{Communicating Components}
 
 The ability to write software, hardware and generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 interconnect.
 
@@ -393,7 +408,7 @@ mmap :: String -> HSig a -> Software (SComp (Soften a))
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Related Work}
+\chapter{Concluding Remarks}
 \label{related}
 
 A substantial amount of research has gone into addressing the challenges of programming for FPGAs, opening them up for programmers without a background in hardware design. However, hardware description languages are still the most commonly used tools for programming FPGAs. These languages have revolutionized hardware design but suffer from a lack of expressiveness and standardization -- there is a mismatch between description and synthesized hardware. Designers are therefore looking for alternative solutions, where two of the more well-known approaches are: extending HDLs with features found in modern languages, and synthesis of high-level languages.
@@ -433,7 +448,7 @@ Writing the kind of digital signal processing software that is typically used wi
 
 We intend to further build up the signal library by taking inspiration from related work in synchronous data-flow and introduce clocks as types~\cite{lucy2008}. This would allow the library to deal correctly with (over-)sampling, and to describe multi-clocked networks. Another interesting direction for signal processing could be to investigate other streaming models, such as the one used in Ziri~\cite{ziria2015, fudgets1993}.
 
-\section{Concluding Remarks}
+\section{Conclusion}
 \label{conc}
 
 The co-design library is based on a combination of shallowly and deeply embedded types, which makes the library modular. Furthermore, the software and hardware languages embedded within the library has been made extensible, to support dialects intended for different components. Both languages are also based on the same representation of imperative programs, which is parameterized on the language's instruction set, and their expression and predicate types. So, with the help of this program type, users wishing to define a new imperative language only have to give an implementation of these three types. They get the rest for free.

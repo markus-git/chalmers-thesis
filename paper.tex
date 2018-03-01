@@ -17,12 +17,12 @@
 \usepackage{csquotes} % Needed for biblatex
 \usepackage[%
     url=true
-  , style=authoryear% alphabetic
+  , style=numeric%alphabetic%authoryear
   , maxbibnames=10%
   , maxcitenames=2%
   , mincitenames=1%
   , backref=true%
-  , dashed=false%
+%  , dashed=false%
   , backend=biber%
   ] {biblatex} % Modern bibliography facilities (you may change style to numeric). Change to old bibtex if you insist on using that.
 \usepackage[%
@@ -36,6 +36,7 @@
   ]{hyperref} % links in pdf document
 \usepackage{mathtools} % All your math related needs
 \usepackage{tikz} % Draw figures. Required for cover page
+%\usepackage{natbib}
 \usepackage{fancyhdr} % fine-tuning of headers
 \pagestyle{fancy}
 

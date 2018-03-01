@@ -50,24 +50,14 @@
 %\usepackage{pgfplots} % Make plots directly in latex. Also tables. Excellent package.
 \usepackage{subfiles}
 \usepackage{subcaption}
+\usepackage{afterpage}% for "\afterpage"
+\usepackage{xcolor}
+\usepackage{pagecolor}% With option pagecolor={somecolor or none}
 %\usepackage{subfig}
 \usepackage{mhaskell}
 %\usepackage{yourcustomcommands} % Put your custom commands in a file 'yourcustomcommands.sty' and load it like this.
 
 \usepackage{lipsum}\setlipsumdefault{1-3} % Package used to put in placeholder text. Remove it.
-
-\makeatletter
-
-\newrobustcmd*{\nobibliography}{%
-  \@ifnextchar[%]
-    {\blx@nobibliography}
-    {\blx@nobibliography[]}}
-
-\def\blx@nobibliography[#1]{}
-
-\appto{\skip@preamble}{\let\printbibliography\nobibliography}
-
-\makeatother
 
 % User commands
 \title{The Title of Your Thesis which might be very long}
@@ -154,17 +144,12 @@ Nigeria
 \printbibliography % This command is new in biblatex. Do not attempt to use style files as with old latex.
 
 \part{Appended Papers}
-% % You can write this manually \paper{Paper Title}{Full reference} or have bib entries entered automatically
-% % \paper{A study of multiple crack interaction at rolling contact fatigue of rails}{\lipsum}
-%\paper{\citefield{paper:A}{title}}{\fullcite{paper:A}}
+\cleardoublepage
 
-% %\includepdf[pages=-,width=\paperwidth]{ExampleMasters.pdf} % You could use subfiles here instead.
-% 
-% \paper{\citefield{paper:B}{title}}{\fullcite{paper:B}}
-% % \includepdf[pages=-,width=\paperwidth]{paperb.pdf}
-% 
-% \part{Other Publications} % If applicable:
-% \toptext{Other publications related to thesis}
-% \publication{\citefield{paper:A}{title}}{\fullcite{paper:A}}
+\paper{\citefield{aronsson2014}{title}}{\fullcite{aronsson2014}}
+\includepdf[pages=-,width=\paperwidth]{paper-supervisory/paper1.pdf}
+
+\paper{\citefield{aronsson2017}{title}}{\fullcite{aronsson2017}}
+\includepdf[pages=-,width=\paperwidth]{paper-supervisory/paper2.pdf}
 
 \end{document}

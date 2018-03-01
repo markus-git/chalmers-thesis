@@ -1,7 +1,30 @@
-.PHONY: main.pdf all clean
+# LaTeX Makefile
+FILE=paper
 
-main.pdf: main.tex
-	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make main.tex
+all: $(FILE).pdf
+
+.PHONY: clean
 
 clean:
-	latexmk -CA
+	rm -rf *.blg 
+	rm -rf *.out 
+	rm -rf *.bbl 
+	rm -rf *.log
+	rm -rf *.ind
+	rm -rf *.ilg
+	rm -rf *.lot
+	rm -rf *.lof
+	rm -rf *.ind
+	rm -rf *.idx
+	rm -rf *.aux
+	rm -rf *.toc
+	rm -f ${FILE}.pdf
+
+
+$(FILE).pdf: *.tex *.bib *.sty kappa/*.tex
+	pdflatex -shell-escape $(FILE).tex
+	pdflatex -shell-escape $(FILE).tex
+	makeindex $(FILE)
+	biber $(FILE)
+	pdflatex -shell-escape $(FILE).tex
+	pdflatex -shell-escape $(FILE).tex

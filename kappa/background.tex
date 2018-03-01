@@ -1,0 +1,191 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   .--~*teu.
+%  dF     988Nx
+% d888b   `8888>
+% ?8888>  98888F
+%  "**"  x88888~
+%       d8888*`
+%     z8**"`   :
+%   :?.....  ..F
+%  <""888888888~
+%  8:  "888888*
+%  ""    "**"`
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+\chapter{Background}
+\label{background}
+
+High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
+
+Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
+
+While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors and accelerators are programmed in a low level dialect of C or assembler. The use of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, such languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
+
+Furthermore, in the design of a heterogeneous systems there's also concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
+
+One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component. In heterogeneous system design, the developer must specify both hardware and software parts, and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is a major undertaking.
+
+% \todo{Work in bits about signal processing.}
+
+Many of the issues faced in heterogeneous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a separate design decision. In imperative languages like C, this is however quite difficult to do. On the other hand, HDLs assume programs are parallel by default, and extra care has to be taken when ordering operations.
+
+Issues with differences in language design between imperative languages and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
+
+\section{Functional Programming}
+\label{functional}
+
+Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
+
+A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provide a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and it can be defined as follows:
+
+\begin{code}
+map :: (a -> b) -> [a] -> [b]
+map f []     = []
+map f (x:xs) = f x : map f xs
+\end{code}
+
+The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs. If you by mistake write a program that tries to multiply some integer by a boolean type, it won't even compile and instead warns you about the type error. As for the types themselves, they are a kind of label that every expression has and states what category of operations that the expression belongs in.
+
+A function's type comes after the \codei{::} sign, and in the case of \codei{map}, tells us that its first argument is a function \codei{f :: a -> b} which, given an argument of type \codei{a}, produces a result of type \codei{b}. In addition to the function, \codei{map} also takes a list \codei{xs :: [a]} of element with type \codei{a}, and returns another list of elements with type \codei{b}. As functions cannot have any side effects, we can already make a guess at what this function does and claim that it applies \codei{f} to every element of \codei{xs}.
+
+The second and third line of \codei{map} validates our earlier guess and lists the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
+
+The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g <> f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
+
+\begin{code}
+(.) :: (b -> c) -> (a -> b) -> a -> c
+(.) g f x = g (f x)
+\end{code}
+
+\noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
+
+\section{Domain Specific Languages}
+
+A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and captures the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. Both use a language that is specialized to the particular task they have at hand, and both build programs in a form that is familiar to regular programmers; VHDL and JavaScript are both examples of a DSL.
+
+DSLs comes in two fundamentally different forms: external and internal. An external DSL is a first-class language, with its own compiler or interpreter, and often comes with its own ecosystem. The previous VHDL and JavaScript examples both fall into the domain of external DSLs. Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs). Embedded languages can have the look and feel of a stand-alone language, but reuse many parts of the host-language's ecosystem and semantics to lower the cost to develop and maintain them.
+
+Haskell, with its static type system, flexible overloading and lazy semantics, has seen itself as host for a range of EDSLs. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language. The advantage of a shallow embedding is that we can quickly calculate the value of a program, we simply evaluate it to get its value.
+
+Shallowly embedded languages do however perform quite poorly if we wish to compile the language; functions only return values and there's no way to look at representation of a program. To compile an embedded language it is better to use an intermediate representation for its abstract syntax tree, that sits between Haskell and the compiled code. This technique is known as a deep embedding and lets us inspect a whole program rather than simply its result. While the representation of embedded language's syntax tree can become quite large and unwieldy as the set supported operations grows, it is necessary to have one if we would like to do any kind of transform over the representation, or if we wish to introduce another interpretation.
+
+The benefits of shallow and deeply embedded are both attractive to have for an EDSL, at least in the sense that a shallow embedding can easily add new language features and a deep embedding supports multiple interpretations. While the implementation of these two types of embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we do in fact make use of a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top.
+
+\section{Embedded Programming in Haskell}
+\label{haskell}
+
+Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming where users express their program as a series of sequential steps to be executed on some machine. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
+
+As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. The mathematical definition of a FIR filter of rank $N$ is as follows:
+
+% This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have an infinite impulse response. 
+
+\vspace{-2mm}
+\begin{equation}
+y_{n} = b_{0} x_{n} + b_{1} x_{n-1} + \cdots + b_{N} x_{n-N} = \sum_{i=0}^{N} b_{i} x_{n-i}
+\end{equation}
+\vspace{1mm}
+
+\noindent where $x$ and $y$ are the input and output signals, respectively, and $b_i$ is the value of the impulse response at time instant $i$. The inputs $x_{n-i}$ are sometimes referred to as ``taps'' as they tap into the input signal at various time instants. 
+
+In an imperative language like C, we can implement the FIR filter as:
+
+\begin{code}
+void fir(int N, int L, double *b, double *x, double *y)
+{
+ int j, k;
+ double tap[256];
+ for(j=0; j<N; j++) tap[j] = 0.0;
+ for(j=0; j<L; j++)
+ {
+  for(k=N; k>1; k--) tap[k-1] = tap[k-2];
+  tap[0] = x[j];
+  y[j] = 0.0;
+  for(k=0; k<N; k++) y[j] += b[k] * tap[k];
+ }
+}
+\end{code}
+
+\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
+
+\begin{code}
+double dot(int N, double *xs, double *ys)
+{
+  double sum = 0;
+  for (int i=0; i<N; i++) sum += xs[i] * ys[i];
+  return sum;
+}
+\end{code}
+
+\noindent the function is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not readily compositional since the function cannot be merged with the producers of \codei{xs} or \codei{ys} without looking at its implementation.
+
+In Haskell, functions like the dot-product can be implemented in a compositional style by using two operations from its standard libraries, namely \codei{zipWith} and \codei{sum}:
+
+\begin{code}
+dot :: Num a => [a] -> [a] -> a
+dot xs ys = sum (zipWith (*) xs ys)
+\end{code}
+
+\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication -- \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+
+Now, with the help of our dot-product, we can implement the FIR filter as well:
+
+\begin{code}
+fir :: Num a => [a] -> [a] -> [a]
+fir b xs = snd (mapAccumR step (replicate (length b) 0) xs)
+  where
+    step :: [a] -> a -> ([a], a)
+    step ts i = (x, dot b x)
+      where x = shift i ts
+  
+    shift :: a -> [a] -> [a]
+    shift x xs = x : init xs
+\end{code}
+
+\noindent We have also factored out two additional components of the filter, namely the \codei{shift} and \codei{step} operations: \codei{shift} manages the filter's taps as it pushes a new value onto them while at the same time dropping their oldest value; \codei{step} implements the logic of the second for-loop in the C variant, that is, it shifts the current input onto the taps and then calculates the output for that time instant. As for the main filter body itself, a special mapping function called \codei{mapAccumR} is used, which is similar to the earlier \codei{map} function show in section~\ref{functional}, but also carries around an extra value throughout its applications of \codei{step} to the inputs \codei{xs}. This extra value is used to hold the filter's taps. The taps are initially a list of zeroes created by Haskell's \codei{replicate} function, and each application of \codei{step} pushes an new input onto the taps. The result of the filter is obtained using \codei{snd}, which throws away the taps and returns only the accumulated outputs.
+
+Embedded programming in Haskell is quite similar to the kind of functional programming that we have done so far. In fact, we can reimplement the earlier dot-product as an embedded function in our co-design library without having to change its definition very much at all:
+
+\begin{code}
+dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
+dot xs ys = sum (zipWith (*) xs ys)
+\end{code}
+
+\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, vectors can be thought of as lists with a finite size, while expressions can be thought of as a computation that produces a regular value. The latter analogy is especially true, as it is possible to evaluate expressions into their equivalent value in Haskell:
+
+\begin{code}
+evaluateExp :: Type a => Exp a -> a
+\end{code}
+
+\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This constraint is enforced by the \codei{Type} class, which is really a collection of constraints of smaller constraints, which ensures \codei{a} part of the set of types we can represent---such as boolean or numerical types.
+
+Evaluating expressions into their matching Haskell value is however not the only supported interpretation. In fact, we could just as well have compiled the same expression to, say, its equivalent C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} builds an interim data structure that reflects the computation behind the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what allows the compiler to inspect, modify and, ultimately, generate code from an expression.
+
+The similarities between the implementations of our embedded dot-product and the earlier one are mostly superficial, as the helper functions used in the embedded variant are not the standard Haskell functions used before, but rather functions provided by our vector library that share the same names.
+
+\begin{code}
+data Vec a = Vec (Exp Length) (Exp Index -> a)
+
+zipWith :: (Type a, Type b) => (a -> b -> c) -> Vec a -> Vec b -> Vec c
+zipWith f a b = map (uncurry f) (zip a b)
+
+sum :: (Num a, Type a) => Vec a -> a
+sum = fold (+) 0
+\end{code}
+
+\noindent What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
+
+Vectors, when implemented in the above manner, are an example of a shallowly embedded data type. Its no coincident that the definition of vectors is similar to their \todo{semantics}, as the very idea of shallow embeddings is that the representation they use model the operations that can be performed on them. This characteristic of shallow embeddings makes it \todo{easy} to add new language constructs, like a \codei{mapAccum} for vectors, but also makes them difficult to interpret in any other way than the intended one. To get around this issue, vectors are based on the deeply embedded \codei{Exp} type, and can be interpreted as one big expression. Compiling the embedded dot-product to C yields the following code:
+
+\begin{code}
+-- todo: compile dot-product to C and past code here.
+\end{code}
+
+Comments about the code.
+
+\end{document}

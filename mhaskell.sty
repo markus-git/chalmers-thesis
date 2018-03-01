@@ -1,0 +1,66 @@
+\RequirePackage{listings}
+
+\lstloadlanguages{Haskell}
+\lstset{
+    language=Haskell,
+    keywords={where,let,in,if,then,else,case,of,do,type
+             ,data,class,instance,family
+             ,newtype,deriving},
+    otherkeywords={::},
+    morecomment=[l]{--},
+    literate=
+        {>=}{{$\geq$}}2
+        {<=}{{$\leq$}}2
+        {\\}{{$\lambda$}}1
+        {\\\\}{{\char`\\\char`\\}}1
+        {->}{{$\rightarrow$}}2
+        {<-}{{$\leftarrow$}}2
+        {=>}{{$\Rightarrow$}}2
+        {>>=}{{>>=}}3
+        {>=>}{{>=>}}3
+        {<=>}{{<=>}}3
+        {>>}{{>{>}}}2
+        {-->}{{$\longrightarrow$}}4
+        {===>}{{$\Longrightarrow$}}3
+        {<==}{{$\Leftarrow$}}1
+        {|->}{{$\mapsto$}}2
+        {<>}{{$\circ$}}2
+        {forall}{{$\forall$}}0
+        {exists}{{$\exists$}}0
+        {~}{{$\sim$}}1
+        {~=}{{$\approx$}}2
+        {undefined}{{$\ldots$}}3
+        {--dotLine}{{$\ldots$}}3
+        {--vdotLine}{{$\vdots$}}3
+        {--emptyLine}{{}}1
+        {OLD}{}0
+        {NEW}{}0
+        {ZERO}{{$_{\text{0}}$}}1
+        {ONE}{{$_{\text{1}}$}}1
+        {TWO}{{$_{\text{2}}$}}1
+        {\\n}{{\char`\\n}}1
+}
+
+\lstset{
+    basicstyle=\fontsize{8}{10}\fontencoding{T1}\ttfamily,
+    breaklines=false,
+    breakatwhitespace=false,
+    frame=tb,
+    keepspaces=true,
+    numbers=left,
+    numbersep=8pt,
+    showstringspaces=false,
+    aboveskip=8pt,
+    belowskip=8pt,
+    xleftmargin=-5.0ex,
+    xrightmargin=5.0ex
+}
+
+\lstnewenvironment{code}{\minipage{\textwidth}}{\endminipage}
+\lstnewenvironment{stub}{\minipage{\textwidth}}{\endminipage}
+\lstnewenvironment{ghci}{\minipage{\textwidth}\lstset{keywords={Main}}}{\endminipage}
+
+\newcommand{\codei}[1]{\lstinline[breaklines=false]{#1}}
+\newcommand{\codel}[1]{\lstinline[breaklines=true]{#1}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\ignore}[1]{}

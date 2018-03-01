@@ -1,0 +1,69 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%         xeee    
+%        d888R    
+%       d8888R    
+%      @ 8888R    
+%    .P  8888R    
+%   :F   8888R    
+%  x"    8888R    
+% d8eeeee88888eer 
+%        8888R    
+%        8888R    
+%     "*%%%%%%**~ 
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+\chapter{Concluding Remarks}
+\label{related}
+
+A substantial amount of research has gone into addressing the challenges of programming for FPGAs, opening them up for programmers without a background in hardware design. However, hardware description languages are still the most commonly used tools for programming FPGAs. These languages have revolutionized hardware design but suffer from a lack of expressiveness and standardization -- there is a mismatch between description and synthesized hardware. Designers are therefore looking for alternative solutions, where two of the more well-known approaches are: extending HDLs with features found in modern languages, and synthesis of high-level languages.
+
+Compiling high-level languages to a hardware description has a great appeal, finding a translation between the two has however proven to be difficult. Tools like Catapult C~\cite{graphics2008} are able to generate register transfer level code from ordinary C descriptions, but sequential programs are often a bad fit for the parallelism inherent to most hardware architectures. Additional attempts includes creating dialects of the host language, such as System C~\cite{ghenassia2005}.
+
+Another group of languages whom have shown success in describing hardware designs are the functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a useful abstraction mechanism which captures many useful design patterns: hardware descriptions can be parameterized and passed around as parameters themselves. An additional attribute of these languages is their purity, enabling formal reasoning about function (de-)composition. Without side-effects, a synthesis tool can derive the inherent parallelism of a functional description as it only has to respect data dependencies.
+
+There has been a number of other approaches to hardware description using functional languages, most of which are focused on describing hardware through structural descriptions rather than sequential algorithms. Sheeran pioneered this approach with $\mu$FP~\cite{sheeran1984}, which utilizes a set of functional combinators to support the composition of larger descriptions from existing ones. Various languages from the Lava family~\cite{bjesse1998, gill2010} of languages have since built upon these ideas. None has however, to the extent of my knowledge, ventured into the design of heterogeneous architectures, like that of a modern FPGA. The benefits of figuring out how to programme such system is however in no way limited to FPGAs, as most future processors are likely going to be heterogeneous in exactly the same way~\cite{sheeran2015}.
+
+The functional approach to hardware description also includes languages outside of the Lava family, like C$\lambda$ash~\cite{baaij2010}, a compiler capable of translating a subset of Haskell into synthesizable hardware. C$\lambda$ash is however limited to describing hardware and forgoes support of other components. Bluespec~\cite{nikhil2004}, a HDL with strong influence from functional languages, does support both software and hardware descriptions and includes concepts such as higher-order functions and polymorphism. Nevertheless, Bluespec descriptions are written at a clock-cycle granularity and therefore provide a lower level of abstractions than most functional languages. % Worth mentioning is also Chisel~\cite{bachrach2012}, a hardware description language embedded in Scala, which, like Bluespec, supports both cycle-accurate software simulation and hardware generation from its descriptions.
+
+Lightweight Modular Staging (LMS) has also been explored as an option to ease the construction of a domain-specific High Level Synthesis (HLS) system~\cite{george2013}. The argument is that LMS eases the reuse of modules between different HLS flows, and makes it easier to link to existing tools such as the C compilers that are able to produce register-level transfer descriptions. Though the language-specific challenges for LMS are different from ours, the two approaches are comparable in terms of capability. The way in which code generation of programs is built upon the translation of monads to imperative programs is also reminiscent of Sunroof~\cite{gill2014}, a DSL for generating JavaScript.
+
+Outside the domain of HLS, examples of DSLs with similar ambitions to ours include the Cryptol DSL for cryptography~\cite{cryptol} and Microsoft's Accelerator~\cite{accelerator} for programming GPUs and various other platforms---although the latest versions of Cryptol no longer support hardware generation.
+
+The signal processing is based on the synchronous data-flow paradigm and is inspired by similar languages from this domain. Of the synchronous languages, Lucid Synchrone~\cite{pouzet2006, colaco2004} is perhaps our biggest inspiration and it is designed to be used with reactive systems. Initially, the language was introduced as an extension of LUSTRE~\cite{hu1998}, and extended the language with new and powerful features. For instance, automatic clock and type inference were introduced and a limited form of higher-order functions was added. Lucid Synchrone is however a standalone language, and thus cannot be easily integrated with EDSLs such as our co-design library. Z{\'e}lus~\cite{zelus2013}, a successor of Lucid Synchrone, has shown that synchronous languages can be extended to model hybrid systems as well, that is, system which consist of both continuous and discrete components.
+
+Another, and rather different approach to modeling signal processing is functional reactive programming. Yampa~\cite{yampa2003} is one member of this paradigm, and is used for programming hybrid systems. At its core, functional reactive programming is about describing a system's behaviors and events, where behaviors are continuous and time-varying, reactive values, and events are time-ordered sequences of discrete-time event occurrences~\cite{nilsson2002}. 
+
+Apart from the different notions of time in synchronous data-flow and functional reactive programming, the idea behind behaviors are quite similar to the signals used in synchronous language. An event is usually a separate entity, modeling the control flow of a system. Some languages do, however, merge the two concepts at a cost of some elegance by having discrete behaviors, but in return they can describe events in terms of behaviors.
+
+\section{Discussion}
+\label{disc}
+
+Whether measured in the number of operations per seconds a system can handle or its power management size, performance is perhaps the most important feature of embedded systems. Since a embedded system is dedicated to a specific task, developers can optimize it to increase performance. To do so, they take advantage of the low-level intrinsics of the system, often by using a equally low-level programming language. However, this reliance on low-level characteristics of a system also has the unfortunate side-effect of restricting programs to the systems they're initially written for.
+
+Low-level languages provide little in the way of abstractions to address the above modularity problems. In a heterogeneous programming setting, this problem is aggravated as several programming languages are used to describe the different components of a system. Each of these languages could potentially have their own set of intrinsics operations, or even belong to different programming paradigms.
+
+This thesis presents our first steps towards a system in which the entire design process of a heterogeneous system. However, instead of taking on the challenge of heterogeneous system design head on, we are currently exploring a more modest approach; develop a library, embedded in Haskell, for hardware-software co-design, and see how far we can get. The co-design library introduced in this thesis is designed with this goal in mind, and provides a means to write a mixture of software and hardware functions, with a reasonable degree of control over the generated C and VHDL code. Being embedded in Haskell, we exploit its parametric polymorphism to facilitate functions that can be interpreted in software and hardware. This in turn allows the exploration to decide where the boundary between hardware and software should be, to be done entirely in Haskell.
+
+The co-design library is modular in the sense that new instructions and interpretations can be added with relatively little disturbance to the existing system, allowing the library to be used in the development of new languages or simply to extend the current software and hardware language with new intrinsic operations. The library is also modular from the users perspective, as they can write generic code through the use of free abstractions. For instance, the pairs used in section~\ref{expr} let us treat a point in space as a pair of coordinates, and when compiled, had completely disappeared. These pair are an example of a shallowly embedded type, and when paired with a translation into the deeply embedded core language, present a type of abstraction that only resides in Haskell. It is also possible to derive new vector combinators from existing ones without incurring any extra memory usage or traversals, since the vector library guarantees fusion of its operations.
+
+Currently, the co-design library provides two interpretations of its programs: evaluation and compilation. Hardware programs are however often simulated to explore a systems response to some combination of inputs. The final system is intended to support additional interpretations, like simulation, as well. Streaming is also limited in hardware, as the co-design library the only provides an AXI4-lite interconnect. Full AXI4 is however expressed as a regular hardware design, just like AXI4-lite, and we intend to implement it within the co-design library. Another possible extension would be to provide access to other components of an embedded system.
+
+Writing the kind of digital signal processing software that is typically used with embedded systems is however still a tedious task. Primarily because of the focus on expressing it algorithms with, relatively low-level, traversals such as for-loops. The vector library alleviates this a bit, as it provides a number of useful abstractions for expressing array computations. Some algorithms are however better described in a data-flow style, where computations are treated like black boxes, which are connected together in a flow graph. The signal library introduced in this thesis addresses this issue, and provides a means to extend a library that has a notion of pure expressions, like the co-design one, with support for synchronous data-flow operations. The signal library is constructed in a similar fashion as the co-design library, and consists of a deeply embedded core language. As such, it retains much of the elegance and modularity of traditional functional programming for signals.
+
+We intend to further build up the signal library by taking inspiration from related work in synchronous data-flow and introduce clocks as types~\cite{lucy2008}. This would allow the library to deal correctly with (over-)sampling, and to describe multi-clocked networks. Another interesting direction for signal processing could be to investigate other streaming models, such as the one used in Ziri~\cite{ziria2015, fudgets1993}.
+
+\section{Conclusion}
+\label{conc}
+
+The co-design library is based on a combination of shallowly and deeply embedded types, which makes the library modular. Furthermore, the software and hardware languages embedded within the library has been made extensible, to support dialects intended for different components. Both languages are also based on the same representation of imperative programs, which is parameterized on the language's instruction set, and their expression and predicate types. So, with the help of this program type, users wishing to define a new imperative language only have to give an implementation of these three types. They get the rest for free.
+
+Hardware and software programs are designed to both be languages with predictable performance, where the translation between design and source code transparent and easy to influence. For example, the monadic style of memory management is used in favor of high-level synthesis, which can have results that are difficult to predict. Testing of software programs is supported through a variety of interpretation functions, one of which compares the result of running the generated C code with the result of Haskell function---which lets us compare a software program to a model implementation in Haskell. For hardware programs, we currently rely on performing simulation and testing in an external synthesis tool.
+
+The signal library is based on a deeply embedded type, representing the core operations in synchronous data-flow programming. Type classes are used to lift standard Haskell operations to operate point-wise over streams, letting the library retain much of the elegance and modularity of traditional functional programming.
+
+\end{document}

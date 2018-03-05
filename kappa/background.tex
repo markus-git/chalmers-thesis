@@ -131,7 +131,7 @@ dot :: Num a => [a] -> [a] -> a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication -- \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+\noindent Here, the first of the two helper functions, \codei{zipWith}, is used to combine the two input lists \codei{xs} and \codei{ys} into one by element wise multiplication---\codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
 
 Now, with the help of our dot-product, we can implement the FIR filter as well:
 
@@ -156,7 +156,7 @@ dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, vectors can be thought of as lists with a finite size, while expressions can be thought of as a computation that produces a regular value. The latter analogy is especially true, as it is possible to evaluate expressions into their equivalent value in Haskell:
+\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value. The latter analogy is especially appropritate, as it is in fact possible to evaluate expressions into their equivalent value in Haskell:
 
 \begin{code}
 evaluateExp :: Type a => Exp a -> a

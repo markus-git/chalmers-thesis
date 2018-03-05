@@ -162,11 +162,11 @@ dot xs ys = sum (zipWith (*) xs ys)
 evaluateExp :: Type a => Exp a -> a
 \end{code}
 
-\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code.
+\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type.
 
-The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and generate code from an expression.
+Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and generate code from an expression.
 
-The similarities between the implementations of our embedded dot-product and the earlier one are mostly superficial, as the helper functions used in the embedded variant are not the standard Haskell functions used before, but rather functions provided by our vector library that share the same names.
+The similarities between the implementation of the embedded and regular dot-products are mostly superficial. This is because, the helper functions used in the embedded variant are not the standard Haskell functions for lists, but rather functions provided by our vector library that share the same names:
 
 \begin{code}
 data Vec a = Vec (Exp Length) (Exp Index -> a)
@@ -180,7 +180,7 @@ sum = fold (+) 0
 
 \noindent What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
 
-Vectors, when implemented in the above manner, are an example of a shallowly embedded data type. Its no coincident that the definition of vectors is similar to their \todo{semantics}, as the very idea of shallow embeddings is that the representation they use model the operations that can be performed on them. This characteristic of shallow embeddings makes it \todo{easy} to add new language constructs, like a \codei{mapAccum} for vectors, but also makes them difficult to interpret in any other way than the intended one. To get around this issue, vectors are based on the deeply embedded \codei{Exp} type, and can be interpreted as one big expression. Compiling the embedded dot-product to C yields the following code:
+Vectors is an example of a shallowly embedded data type. Its no coincident that the definition of vectors is similar to their \todo{semantics}, as the very idea of shallow embeddings is that the representation they use model the operations that can be performed on them. This characteristic of shallow embeddings makes it \todo{easy} to add new language constructs, like a \codei{mapAccum} for vectors, but also makes them difficult to interpret in any other way than the intended one. To get around this issue, vectors are based on the deeply embedded \codei{Exp} type, and can be interpreted as one big expression. Compiling the embedded dot-product to C yields the following code:
 
 \begin{code}
 -- todo: compile dot-product to C and past code here.

@@ -20,6 +20,8 @@
 \chapter{Background}
 \label{background}
 
+\todo{This is mostly old stuff with some minor edits. New stuff in ``Functional programmin'' section and beyond.}
+
 High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
 
 Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
@@ -38,6 +40,8 @@ Issues with differences in language design between imperative languages and HDLs
 
 \section{Functional Programming}
 \label{functional}
+
+\todo{Read here.}
 
 Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 

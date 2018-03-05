@@ -178,9 +178,13 @@ sum :: (Num a, Type a) => Vec a -> a
 sum = fold (+) 0
 \end{code}
 
-\noindent What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
+\noindent where both \codei{zipWith} and \codei{sum} are defined with the help of other vector functions.
 
-Vectors are an example of a shallowly embedded data type. Its no coincident that the definition of vectors is similar to their \todo{semantics}, as the very idea of shallow embeddings is that the representation they use model the operations that can be performed on them. This characteristic of shallow embeddings makes it \todo{easy} to add new language constructs, like a \codei{mapAccum} for vectors, but also makes them difficult to interpret in any other way than the intended one. To get around this issue, vectors are based on the deeply embedded \codei{Exp} type, and can be interpreted as one big expression. Compiling the embedded dot-product to C yields the following code:
+What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
+
+Its no coincident that the definition of vectors is similar to their \todo{semantics}, as \codei{Vec} is an example of a shallowly embedded data type and the very idea of its representation is to model the operations that can be performed on vectors. This characteristic of shallow embeddings makes it easy to add new functions, but it also makes them difficult to interpret in any way other than the intended one. It is because of this deficiency that vectors are based on the deeply embedded \codei{Exp} type; evaluating \codei{Vec} turns it into one big expression which can then be interpreted.
+
+Compiling the embedded dot-product to C yields the following code:
 
 \begin{code}
 -- todo: compile dot-product to C and past code here.

@@ -22,9 +22,9 @@ clean:
 
 
 $(FILE).pdf: *.tex *.bib *.sty kappa/*.tex
-	pdflatex -shell-escape $(FILE).tex
-	pdflatex -shell-escape $(FILE).tex
+	pdflatex -shell-escape $(FILE)
+	pdflatex -shell-escape $(FILE)
 	makeindex $(FILE)
 	biber $(FILE)
-	pdflatex -shell-escape $(FILE).tex
-	pdflatex -shell-escape $(FILE).tex
+	pdflatex -shell-escape $(FILE)
+	pdflatex -shell-escape $(FILE)

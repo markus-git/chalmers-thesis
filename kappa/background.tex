@@ -168,17 +168,36 @@ evaluateExp :: Type a => Exp a -> a
 
 \noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type.
 
-Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and generate code from an expression.
+Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and interpret an expression in order to support, for example, its compilation into source code or evaluation.
+
+For the case of evaluating an expression, if we assume the \codei{Exp} is defined as:
+
+\begin{code}
+data Exp a = Var String | Lit a | Mult (Exp a) (Exp a)
+\end{code}
+
+\noindent that is, expressions contain three constructors for variables, literals, and multiplication---Haskell's \codei{data} keyword introduces a new type and its constructors are separated by a pipe---then its evaluation can be defined like so:
+
+\begin{code}
+evaluateExp :: Type a => Exp a -> a
+evaluateExp (Var v)    = error "open expression."
+evaluateExp (Lit i)    = i
+evaluateExp (Mult a b) = (evaluateExp a) * (evaluateExp b)
+\end{code}
+
+\noindent Each line of \codei{evaluateExp} handles one of the three constructors and translates them into their corresponding Haskell value. The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
 
 The similarities between the implementation of the embedded and regular dot-products are mostly superficial. This is because, the helper functions used in the embedded variant are not the standard Haskell functions for lists, but rather functions provided by our vector library that share the same names:
 
 \begin{code}
-data Vec a = Vec (Exp Length) (Exp Index -> a)
+data Vec a = Vec (Exp Length) (Exp Index -> Exp a)
 
-zipWith :: (Type a, Type b) => (a -> b -> c) -> Vec a -> Vec b -> Vec c
+zipWith :: (Type a, Type b)
+  => (Exp a -> Exp b -> Exp c)
+  ->  Vec a -> Vec b -> Vec c
 zipWith f a b = map (uncurry f) (zip a b)
 
-sum :: (Num a, Type a) => Vec a -> a
+sum :: (Num a, Type a) => Vec a -> Exp a
 sum = fold (+) 0
 \end{code}
 
@@ -186,7 +205,7 @@ sum = fold (+) 0
 
 What's interesting about vectors is that they're defined in terms of a regular Haskell data type with two components: a length, given by the expression \codei{Exp Length}; and an indexing function \codei{(Exp Index -> a)} that, given an index of type \codei{Exp Index}, looks up the value \codei{a} of the vector. \codei{Index} and \codei{Length} are both integer types in disguise that have been renamed to make them more descriptive.
 
-Its no coincident that the definition of vectors is similar to their \todo{semantics}, as \codei{Vec} is an example of a shallowly embedded data type and the very idea of its representation is to model the operations that can be performed on vectors. This characteristic of shallow embeddings makes it easy to add new functions, but it also makes them difficult to interpret in any way other than the intended one. It is because of this deficiency that vectors are based on the deeply embedded \codei{Exp} type; evaluating \codei{Vec} turns it into one big expression which can then be interpreted.
+Its no coincident that the definition of vectors is similar to their semantics, as \codei{Vec} is an example of a shallowly embedded data type and the very idea of its representation is to model the operations that can be performed on vectors. This characteristic of shallow embeddings makes it easy to add new functions, but it also makes them difficult to interpret in any way other than the intended one. It is because of this deficiency that vectors are based on the deeply embedded \codei{Exp} type; evaluating \codei{Vec} turns it into one big expression which can then be interpreted.
 
 Compiling the embedded dot-product to C yields the following code:
 

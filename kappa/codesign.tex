@@ -20,7 +20,7 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe, only generating C code is not enough. Heterogeneous system typically see hardware code interleaved with software code, and components described by the same language can even differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and generate a combination of software and hardware code to enable the transmission of data between components. Furthermore, the software and hardware languages must be extensible to support the addition of various intrinsic operations for different components.
+In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and generate a combination of software and hardware code to enable the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
 C is perhaps the most commonly used language for writing software in embedded systems and is used by the co-design library as well. For hardware descriptions we use the VHDL language. Both C and VHDL are imperative languages. To represent them our co-design library is built on a deep embedding of monads. Monads can be thought of as composable descriptions of a computation, that is, they provide a means to connect smaller programs into a single, larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example, consider a software program for reversing an array:
 
@@ -49,37 +49,33 @@ reverseH arr = undefined -- same as before.
 
 \noindent Other than its type, \codei{reverseH} has the same implementation as \codei{reverseS}.
 
-Being able to implement both \codei{reverseS} and \codei{reverseH} using the same functions hints that us marking them as software and hardware specific programs was unnecessary. We would be better of keeping the reverse function generic, enabling it do be used in both languages. After all, the function only require its implementer to support for-loops and arrays to use it. The co-design library supports this kind of language agnostic functions by employing a hierarchy of type classes over operations like arrays or for-loops, with monads as the base. In the case of our reverse function, we would give it the following type:
+Being able to implement both \codei{reverseS} and \codei{reverseH} using the same functions hints that us marking them as software and hardware specific programs was unnecessary. We would be better of keeping the reverse function generic, enabling it do be used in both languages. After all, the function only require that its implementer supports the for-loop and array operations. This kind of language agnostic function is supported by the co-design library through its use of Haskell's type classes, which enables us to put additional constraints on which operations a function needs in order to operate. In the case of our reverse function, we could give it the following type:
 
 \begin{code}
-reverse :: (Monad m, Arrays m, Control m, Type m Int32) => Arr m Int32 -> m ()
+reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
+  => Arr m Int32 -> m ()
 reverse arr = undefined -- same as before.
 \end{code}
 
-The previous array types of \codei{SArr} and \codei{HArr} have been substituted for a more general type of \codei{Arr}, which is parameterized on the monad \codei{m}. The idea is that, a type of \codei{Arr} will turn into a \codei{SArr} or \codei{HArr} type when the monad is instantiated as \codei{Software} or \codei{Hardware}, respectively. The added constraints of \codei{Arrays} and \codei{Control} on \codei{m} ensures that whichever monad \codei{m} gets instantiated as will support the necessary array and control operations.
+\noindent Here, the previous array types of \codei{SArr} and \codei{HArr} have been substituted for the more general type of \codei{Arr}, which is parameterized on the monad \codei{m} that will eventually be instantiated as either software or hardware. The general idea behind \codei{Arr} is that its type will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their corresponding language.
+
+Our new and generic function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
 
 \begin{code}
 class Monad m => Arrays m where
-  type Arr m :: * -> *
-  newArr  :: Type m a => Exp m Length -> m (Arr m a)
-  getArr  :: Type m a => Arr m a -> Exp m Index -> m a
-  setArr  :: Type m a => Arr m a -> Exp m Index -> a -> m ()
+  type Arr m
+  newArr :: TypeM m a => Exp m Length -> m (Arr m a)
+  getArr :: TypeM m a => Arr m a -> Exp m Index -> m a
+  setArr :: TypeM m a => Arr m a -> Exp m Index -> a -> m ()
 
 class Monad m => Control m where
-  for :: (Type' m a, Integral a) => Exp m a -> Exp m a -> (Exp m a -> m ()) -> m ()
+  for :: (TypeM m a, Integral a) => Exp m a -> Exp m a -> (Exp m a -> m ())
+      -> m ()
 \end{code}
 
-While \codei{Software} and \codei{Hardware} both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective \codei{Software} and \codei{Hardware} monads.
+\noindent These list the operations associated with each class and, in the case of arrays, the type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}. The \codei{TypeM} and \codei{Exp} types introduced herer are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
 
-\begin{code}
-class Monad m => SoftwareMonad m where
-  liftSoftware :: m a -> Software a
-\end{code}
-
-% It crashes if I add the hardware monad...
-% 
-% class Monad m => HardwareMonad m where
-%   liftHardware :: m a -> Hardware a
+While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective \codei{Software} and \codei{Hardware} monads.
 
 \section{Embedded Expressions}
 \label{expr}

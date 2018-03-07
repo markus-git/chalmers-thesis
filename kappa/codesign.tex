@@ -20,9 +20,13 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and generate a combination of software and hardware code to enable the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
+In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and to generate a combination of software and hardware code for the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
-C is perhaps the most commonly used language for writing software in embedded systems and is used by the co-design library as well. For hardware descriptions we use the VHDL language. Both C and VHDL are imperative languages. To represent them our co-design library is built on a deep embedding of monads. Monads can be thought of as composable descriptions of a computation, that is, they provide a means to connect smaller programs into a single, larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example, consider a software program for reversing an array:
+\section{Software and Hardware Programs}
+
+C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with. While these two languages are designed with different tasks in mind, both C and VHDL are imperative languages in their nature. Because of this, our co-design library is built on a deep embedding of monads as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
+
+As an example of the similarities between monads and imperative programs, consider a software program for reversing an array:
 
 \begin{code}
 reverseS :: SArr Int32 -> Software ()
@@ -36,20 +40,25 @@ reverseS arr =
     len = length arr
 \end{code}
 
-\noindent Its type tells us that it takes an array over 32-bit integers as input and produces a software program. As the array is reversed in place, the return type of the software program is simply empty, which in Haskell is show as \codei{()}. Also, the array type \codei{SArr} is prefixed with an \codei{S} to show that it is intended to be used with software statements. % an generic array type will be introduced a bit later on.
+\noindent Its type tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type of the software program is empty as the array is reversed in place. The two array operations for reading and writing to an array, \codei{getArr} and \codei{setArr}, behave as you would expect them to: \codei{getArr} takes an array and an index, and returns the array's value at that index; \codei{setArr} takes an array, an index and a value, and stores the value in the array.
 
-The implementation of our \codei{reverseS} function has the look and feel of a imperative program, sans a few syntactical differences. Firstly, the function performs a for-loop over the indices from zero and up to half of the arrays length. Then, for each such index \codei{ix}, it reads the array values at that index and the one from the opposite side. Lastly, these two values are put back into the array at the opposite values' index, resulting in a reversed array once the two indexed values meet in the middle. The two array operations, \codei{getArr} and \codei{setArr}, behave as you would expect them to: \codei{getArr} takes an array and an index, and returns the array's value at that index; \codei{setArr} takes an array, an index and a value, and stores the value in the array.
+The implementation of \codei{reverseS} has the look and feel of a imperative program, sans a few syntactical differences, as it loops over the first half of the array's indices. For each of these indices, \codei{ix}, it reads two values from the array at the leftmost and rightmost places, offset by the index. Having read and stored these two values into the \codei{aix} and \codei{ajx} variables, they are then put back into the array at the opposite place. This process of flipping pairs of values will eventually result in a reversed array when the two indexed values meet in the middle. 
 
-While the type of \codei{reverseS} is that of a software function, there's nothing software specific about it. For-loops and arrays are both part of most imperative languages, including C and VHDL. We could therefore have implemented the reverse function in hardware as well, and we do so by simple changing its type:
+While the type of \codei{reverseS} is that of a software function, there's nothing software specific about it. For-loops and arrays are both part of most imperative languages, including VHDL. We could therefore have implemented the reverse function in hardware as well. In fact, we can define a hardware version of the reverse function simply by changing its type, keeping its body intact:
 
 \begin{code}
 reverseH :: HArr Int32 -> Hardware ()
-reverseH arr = undefined -- same as before.
+reverseH arr =
+  for 0 (len `div` 2) $ \ix -> do
+    aix <- getArr arr ix
+    ajx <- getArr arr (len - ix)
+    setArr arr ix ajx
+    setArr arr (len - ix) aix
+  where
+    len = length arr
 \end{code}
 
-\noindent Other than its type, \codei{reverseH} has the same implementation as \codei{reverseS}.
-
-Being able to implement both \codei{reverseS} and \codei{reverseH} using the same functions hints that us marking them as software and hardware specific programs was unnecessary. We would be better of keeping the reverse function generic, enabling it do be used in both languages. After all, the function only require that its implementer supports the for-loop and array operations. This kind of language agnostic function is supported by the co-design library through its use of Haskell's type classes, which enables us to put additional constraints on which operations a function needs in order to operate. In the case of our reverse function, we could give it the following type:
+The fact that we were able to define both the \codei{reverseS} and \codei{reverseH} functions by using the same implementation body hints that having them marked as software and hardware specific programs was unnecessary. We would be better off keeping the reverse function generic in order to allow it to be used with both languages. After all, the function only requires that its implementer support the for-loop and array operations it uses. This kind of generic functions are supported by the co-design library through its use of type classes, which enables us to put additional constraints on what classes of operations are necessary in order to implement a function and thus which languages is can be instantiate in. For the reverse function, we could give it the following type:
 
 \begin{code}
 reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
@@ -57,9 +66,9 @@ reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
 reverse arr = undefined -- same as before.
 \end{code}
 
-\noindent Here, the previous array types of \codei{SArr} and \codei{HArr} have been substituted for the more general type of \codei{Arr}, which is parameterized on the monad \codei{m} that will eventually be instantiated as either software or hardware. The general idea behind \codei{Arr} is that its type will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their corresponding language.
+\noindent The previous array types of \codei{SArr} and \codei{HArr} are substituted for the more general array type of \codei{Arr}, which is parameterized on the monad \codei{m}. Having the extra parameter on \codei{Arr} lets the type be used with any monad that supports arrays and will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their corresponding software and hardware language.
 
-Our new and generic function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
+The new, and now generic, function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
 
 \begin{code}
 class Monad m => Arrays m where
@@ -75,7 +84,7 @@ class Monad m => Control m where
 
 \noindent These list the operations associated with each class and, in the case of arrays, the type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}. The \codei{TypeM} and \codei{Exp} types introduced herer are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
 
-While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective \codei{Software} and \codei{Hardware} monads.
+While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective monads.
 
 \section{Embedded Expressions}
 \label{expr}
@@ -87,16 +96,16 @@ squareS :: SExp Int32 -> SExp Int32
 squareS a = a * a
 \end{code}
 
-\noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$.
+\noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$. Expressions are however a deeply embedded type, as mentioned in section~\ref{haskell}, and evaluation therefore is not the only interpretation that they support. For instance, this squaring expressions could just as well be compiled to C code when used inside a software program.
 
-Expressions are however a deeply embedded type, and evaluation is not the only interpretation that they support. For instance, looking at the type of \codei{square} we see that its a function from a software expression over 32-bit integers to another expressions of the same type. Software expressions like this, when used in software programs, can also be compiled to C. Like the software programs from section~\ref{codesign} have a corresponding type for hardware programs, \codei{SExp} also has a corresponding hardware type for expressions called \codei{HExp}. The squaring function can be implemented using hardware expressions by simply changing its type:
+Just as the software programs from section~\ref{codesign} had a corresponding type used for hardware programs, \codei{SExp} also has a corresponding hardware type for expressions called \codei{HExp}. The squaring function can be implemented using hardware expressions by simply changing its type:
 
 \begin{stub}
 squareH :: HExp Int32 -> HExp Int32
 squareH a = a * a
 \end{stub}
 
-Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. There is no software or hardware specific characteristics in the squaring function, its expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations:
+Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. There is no software or hardware specific characteristics in either squaring function; the expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations.
 
 \begin{code}
 square :: (Num (exp a), Type' exp a) => exp a -> exp a
@@ -105,7 +114,7 @@ square a = a * a
 
 \noindent Note that the type constraint is slightly different from previous functions, as it makes us of \codei{Type'} instead of \codei{Type}. The former type constraint is designed for functions are parameterized on their expression type, while the latter is used with monads.
 
-In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, expressions can have a composite type of smaller, andIn simple settings, the resulting value is usually one of various primitive types, such as numerical, string, and logical; in more elaborate expressions, it can be a complex data type. For instance, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
+In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, it can be a complex data type. For example, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
 
 \begin{code}
 dist :: (SExp Float, SExp Float) -> (SExp Float, SExp Float) -> SExp Float
@@ -115,7 +124,7 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. In order to compile \codei{dist}, we need to get its input from somewhere and do something with its output. A convenient way to do this in software is to use its \codei{fget} function to read standard input, \codei{stdin}, and \codei{printf} to writes the output out into standard output.
+\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. In order to compile \codei{dist}, we need to get its input from somewhere and do something with its output. A convenient way to do this in software is to use its \codei{fget} function to read standard input, \codei{stdin}, and then use \codei{printf} to write the output out into standard output.
 
 \begin{code}
 distProg :: Software ()

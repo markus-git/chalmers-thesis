@@ -82,7 +82,7 @@ class Monad m => Control m where
       -> m ()
 \end{code}
 
-\noindent These list the operations associated with each class and, in the case of arrays, the type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}. The \codei{TypeM} and \codei{Exp} types introduced herer are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
+\noindent These list the operations associated with each class and, in the case of arrays, the type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}. The \codei{TypeM} and \codei{Exp} types introduced here are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
 
 While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective monads.
 
@@ -150,13 +150,21 @@ Full AXI4 offers a range of interconnects that include variable data and address
 
 Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Signals and process are both supported by our co-design library, and the whole AXI4-lite interface is in fact be implemented within the library. A library function, called \codei{axi_ligth}, takes a hardware program and hooks it up to an AXI4-lite interconnect, and the wrapped hardware component can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical design that can be put onto the FPGA.
 
-With a physical design of a hardware component put on the FPGA its possible to get its address, we use memory-mapped I/O to access it from the software side. 
+With a physical design of a hardware component put on the FPGA its possible to get its address, which we then use on the software side to access the component through memory-map I/O. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. So, the components can monitor a processors address buss and, whenever an address for component is accessed, they forward the request to the address component. For the software side, the shared address space means that a hardware component can be reached by writing to and reading from regular pointers to the components address. As the hardware monad supported signals and processes, the software side supports the necessary operations to implement the memory-mapping process and provides the following function for connecting a hardware component:
 
 \begin{code}
 mmap :: String -> HSig a -> Software (SComp (Soften a))
 \end{code}
 
-\noindent which turns the hardware signature into a software one that we can then call as a regular function. As for the softening of \codei{a}, the hardware signature still expects signals, so those are turned into references instead.
+\noindent Text.
+
+\begin{code}
+type family Soften a where
+  Soften ()              = ()
+  Soften (Signal a -> b) = Ref (SExp a) -> Soften b
+\end{code}
+
+% \noindent which turns the hardware signature into a software one that we can then call as a regular function. As for the softening of \codei{a}, the hardware signature still expects signals, so those are turned into references instead.
 
 
 %\begin{code}

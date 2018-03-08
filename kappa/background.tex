@@ -20,8 +20,6 @@
 \chapter{Background}
 \label{background}
 
-\todo{This is mostly old stuff with some minor edits. New stuff in ``Functional programmin'' section and beyond.}
-
 High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
 
 Processors and ASICs represent two extremes of available architectures, but fortunately there exists several other architectures in between. Field programmable gate arrays (FPGAs) are one such kind, and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects. However, a modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
@@ -32,16 +30,12 @@ Furthermore, in the design of a heterogeneous systems there's also concerns rela
 
 One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component. In heterogeneous system design, the developer must specify both hardware and software parts, and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is a major undertaking.
 
-% \todo{Work in bits about signal processing.}
-
 Many of the issues faced in heterogeneous computing with low level languages like C and HDLs are related to a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues come as a indirect consequence of the lack of abstractions. For instance, we would like to treat functionality like parallelism as a separate design decision. In imperative languages like C, this is however quite difficult to do. On the other hand, HDLs assume programs are parallel by default, and extra care has to be taken when ordering operations.
 
 Issues with differences in language design between imperative languages and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
 
 \section{Functional Programming}
 \label{functional}
-
-\todo{Read here.}
 
 Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 

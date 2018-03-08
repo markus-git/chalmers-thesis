@@ -153,46 +153,23 @@ Five channels make up the whole AXI4-lite specification: the read and write addr
 With a physical design of a hardware component put on the FPGA its possible to get its address, which we then use on the software side to access the component through memory-map I/O. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. So, the components can monitor a processors address buss and, whenever an address for component is accessed, they forward the request to the address component. For the software side, the shared address space means that a hardware component can be reached by writing to and reading from regular pointers to the components address. As the hardware monad supported signals and processes, the software side supports the necessary operations to implement the memory-mapping process and provides the following function for connecting a hardware component:
 
 \begin{code}
-mmap :: String -> HSig a -> Software (SComp (Soften a))
+mmap :: String -> Signature a -> Software (Pointer (Soften a))
 \end{code}
 
-\noindent Text.
+\codei{mmap} takes two arguments: an address and a signature of the hardware component. Signatures are regular programs coupled with a description of their type that can be viewed from within Haskell, something we cannot normally do. The result is of \codei{mmap} is a pointer to the component with a type that has been translated to make use of software constructs like references instead of the signals used in hardware. This translation is handled by a type family, which describes how the hardware type should be interpreted as software instead:
 
 \begin{code}
 type family Soften a where
-  Soften ()              = ()
   Soften (Signal a -> b) = Ref (SExp a) -> Soften b
+  Soften ()              = ()
 \end{code}
 
-% \noindent which turns the hardware signature into a software one that we can then call as a regular function. As for the softening of \codei{a}, the hardware signature still expects signals, so those are turned into references instead.
+\noindent Notice that \codei{Soften} expects its signature to be fully applied, that is, the last argument should be empty.
 
+With a hardware component placed onto the FPGA and then memory-mapped into software, we call the component by fully applying its software pointer to its arguments:
 
-%\begin{code}
-%axi_light :: HComp a -> HSig (
-%     Signal Bit       -- ^ Global clock signal.
-%  -> Signal Bit       -- ^ Global reset signal.
-%  -> Signal (Bits 32) -- ^ Write address.
-%  -> Signal (Bits 3)  -- ^ Write channel protection type.
-%  -> Signal Bit       -- ^ Write address valid.
-%  -> Signal Bit       -- ^ Write address ready.
-%  -> Signal (Bits 32) -- ^ Write data.
-%  -> Signal (Bits 4)  -- ^ Write strobes.
-%  -> Signal Bit       -- ^ Write valid.
-%  -> Signal Bit       -- ^ Write ready.
-%  -> Signal (Bits 2)  -- ^ Write response.
-%  -> Signal Bit       -- ^ Write response valid.
-%  -> Signal Bit       -- ^ Response ready.
-%  -> Signal (Bits 32) -- ^ Read address.
-%  -> Signal (Bits 3)  -- ^ Protection type.
-%  -> Signal Bit       -- ^ Read address valid.
-%  -> Signal Bit       -- ^ Read address ready.
-%  -> Signal (Bits 32) -- ^ Read data.
-%  -> Signal (Bits 2)  -- ^ Read response.
-%  -> Signal Bit       -- ^ Read valid.
-%  -> Signal Bit       -- ^ Read ready.    
-%  -> ())
-%\end{code}
-
-% There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions).
+\begin{code}
+call :: Pointer a -> Arguments a -> Software ()
+\end{code}
 
 \end{document}

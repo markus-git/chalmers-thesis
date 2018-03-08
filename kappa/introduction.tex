@@ -24,20 +24,90 @@ Embedded systems are, in brief, any computer system that is part of a larger sys
 
 Developing software for embedded systems, in most cases, requires good knowledge about the hardware on which the software is supposed to run. Because embedded systems are typically designed with a task in mind, their hardware systems are often built with most cost-effective processor that meets the performance requirements. So developers must ensure their computations are efficient. Every line of code counts.
 
-As important as computational power is for embedded systems, limiting their power consumption presents an equally important issue in their architectural design~\cite{mudge2001}. The trend of trading power for performance cannot continue indefinitely. Containing the growth in power requires architectural improvements, with specialized computing for specialized tasks. Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems that use more than one kind of processing units. These heterogeneous systems gain their performance and energy efficiency not just by combining several processors, but rather by incorporating different kinds of co-processors that provide specialized processing capabilities to handle a particular task.
+As important as computational power is for embedded systems, limiting their power consumption presents an equally important issue in their architectural design~\cite{mudge2001}; the trend of trading power for performance cannot continue indefinitely. Containing the growth in power requires architectural improvements, with specialized computing for specialized tasks.
 
 % typical house hold processors of today have a power density of 70W and upwards, which is seven times that of a typical hot plate
 
-Heterogeneous computing present new challenges in software design that are not found in the development for typical homogeneous systems~\cite{kunzman2011}. The multiple processing units present in a heterogeneous system raises all of the issues associated with homogeneous parallel systems, while the heterogeneity in the system gives rise to new issues due to  dissimilarity in system development and capability. The efficiency and computational power of heterogeneous systems thus comes at a cost of increased programming burden in terms of code complexity and portability, as hardware specific code is interleaved with application code to handle any communication between co-processors. Furthermore, the structure of application code typically vary between co-processors and any code written for one therefore requires modification when given a new target. In fact, despite all the advantages heterogeneous systems offer, their use so far has been mostly restricted to hardware programmers.
+% Heterogeneous computing present new challenges in software design that are not found in the development for typical homogeneous systems~\cite{kunzman2011}. The multiple processing units present in a heterogeneous system raises all of the issues associated with homogeneous parallel systems, while the heterogeneity in the system gives rise to new issues due to dissimilarity in system development and capability.
 
-A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. However, hardware description languages, such as VHDL and Verilog, are still the most commonly used tools, together with C for specific co-processors. These hardware description languages have revolutionized hardware design but suffer from a lack of expressiveness and standardization -- there is a mismatch between description and synthesized hardware. Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
+Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems that use more than one kind of processing units. These heterogeneous systems gain their performance and energy efficiency not just by combining several processors, but rather by incorporating different kinds of co-processors that provide specialized processing capabilities to handle a particular task. Their efficiency and computational power comes at a cost of increased programming burden in terms of code complexity and portability, as hardware specific code is interleaved with software code to describe its various components and to handle any communication between co-processors.
 
-Another group of languages whom I believe have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition. That is, functional programming separates the definition and evaluation of its functions, and functions could, for example, be run in parallel, as long as their dependencies are covered. Functional languages are however rarely considered for embedded system development, as its difficult to give performance guarantees and resource bounds for its programs.
+% The efficiency and computational power of heterogeneous systems thus comes at a cost of increased programming burden in terms of code complexity and portability, as hardware specific code is interleaved with application code to handle any communication between co-processors.
+
+% Furthermore, the structure of application code typically vary between co-processors and any code written for one therefore requires modification when given a new target. In fact, despite all the advantages heterogeneous systems offer, their use so far has been mostly restricted to hardware programmers.
+
+A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C for specific co-processors. While these languages are good for extracting maximum performance from a processor, they provide little to no abstractions for alleviate the task of programming for heterogenous systems.
+
+% such as VHDL and Verilog
+
+% These hardware description languages have revolutionized hardware design but suffer from a lack of expressiveness and standardization -- there is a mismatch between description and synthesized hardware.
+
+% Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
+
+Another group of languages whom I believe have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation.
+
+% That is, functional programming separates the definition and evaluation of its functions, and functions could, for example, be run in parallel, as long as their dependencies are covered. Functional languages are however rarely considered for embedded system development, as its difficult to give performance guarantees and resource bounds for its programs.
 
 This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
 
+Text.
+
+\begin{code}
+dot :: SArr Int32 -> SArr Int32 -> Software (SRef Int32)
+dot xs ys =
+  do sum <- initRef 0
+     for 0 len $ \ix ->
+       do x <- getArr xs ix
+          y <- getArr ys ix
+          t <- getRef sum
+          setRef sum (t + x * y)
+     return sum
+  where
+    len = max (length xs) (length ys)
+\end{code}
+
+Text.
+
+\begin{code}
+program :: Software ()
+program =
+ do -- todo: read input arrays in a nice way.
+    r   <- dot xs ys
+    sum <- getRef ref
+    printf "sum: %d" sum
+\end{code}
+
+Text.
+
+\begin{code}
+dot :: (Monad m, Arrays m, Control m, TypeM m Int32)
+  => Arr m Int32 -> Arr m Int32 -> m (Exp m Int32)
+\end{code}
+
+Text.
+
+\begin{code}
+dotSig :: Signature (HArr Int32 -> HArr Int32 -> HRef Int32)
+dotSig = inpArr 16 $ \xs -> inpArr 16 $ \ys -> ret $ dot xs ys
+\end{code}
+
+Text.
+
+\begin{code}
+offloaded :: Software ()
+offloaded =
+  do -- todo: read input arrays in a nice way.
+     comp <- mmap "0x83C0_0000" dotSig
+     r    <- newRef
+     call comp (xs :> ys :> r)
+     sum <- getRef r
+     printf "sum: %d" sum
+\end{code}
+
+Text.
+
 This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
 
-% Limit to FPGAs.
+% ToDo: Limit to FPGAs.
 
 \end{document}

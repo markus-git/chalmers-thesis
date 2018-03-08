@@ -22,7 +22,7 @@
 
 In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and to generate a combination of software and hardware code for the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
-\section{Software and Hardware Programs}
+\section{Particular Programs}
 
 C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with. While these two languages are designed with different tasks in mind, both C and VHDL are imperative languages in their nature. Because of this, our co-design library is built on a deep embedding of monads as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
 
@@ -146,44 +146,45 @@ Compile code and past result here.
 
 The ability to write software, hardware and generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 interconnect.
 
-Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no need for such advanced features. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
+Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no real need for such advanced features---although burst writing of arrays is desirable they are usually small enough to not impact performance. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
 
-Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. We introduce these channels from the processor's perspective. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Signals and process are both supported by our co-design library, and the whole AXI4-lite interface can in fact be implemented within the library. A function that takes a hardware program and hooks it up to an AXI4-lite interconnect is provided by the library.
+Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Signals and process are both supported by our co-design library, and the whole AXI4-lite interface is in fact be implemented within the library. A library function, called \codei{axi_ligth}, takes a hardware program and hooks it up to an AXI4-lite interconnect, and the wrapped hardware component can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical design that can be put onto the FPGA.
 
-% Show AXI function? Its type is quite big.
-
-\begin{code}
-axi_light :: HComp a -> HSig (
-     Signal Bit       -- ^ Global clock signal.
-  -> Signal Bit       -- ^ Global reset signal.
-  -> Signal (Bits 32) -- ^ Write address.
-  -> Signal (Bits 3)  -- ^ Write channel protection type.
-  -> Signal Bit       -- ^ Write address valid.
-  -> Signal Bit       -- ^ Write address ready.
-  -> Signal (Bits 32) -- ^ Write data.
-  -> Signal (Bits 4)  -- ^ Write strobes.
-  -> Signal Bit       -- ^ Write valid.
-  -> Signal Bit       -- ^ Write ready.
-  -> Signal (Bits 2)  -- ^ Write response.
-  -> Signal Bit       -- ^ Write response valid.
-  -> Signal Bit       -- ^ Response ready.
-  -> Signal (Bits 32) -- ^ Read address.
-  -> Signal (Bits 3)  -- ^ Protection type.
-  -> Signal Bit       -- ^ Read address valid.
-  -> Signal Bit       -- ^ Read address ready.
-  -> Signal (Bits 32) -- ^ Read data.
-  -> Signal (Bits 2)  -- ^ Read response.
-  -> Signal Bit       -- ^ Read valid.
-  -> Signal Bit       -- ^ Read ready.    
-  -> ())
-\end{code}
-
-There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions). The resulting hardware signature can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical component which can be put onto the FPGA. Then, after getting the components physical address on the FPGA, we use memory-mapped I/O to access it from software:
+With a physical design of a hardware component put on the FPGA its possible to get its address, we use memory-mapped I/O to access it from the software side. 
 
 \begin{code}
 mmap :: String -> HSig a -> Software (SComp (Soften a))
 \end{code}
 
 \noindent which turns the hardware signature into a software one that we can then call as a regular function. As for the softening of \codei{a}, the hardware signature still expects signals, so those are turned into references instead.
+
+
+%\begin{code}
+%axi_light :: HComp a -> HSig (
+%     Signal Bit       -- ^ Global clock signal.
+%  -> Signal Bit       -- ^ Global reset signal.
+%  -> Signal (Bits 32) -- ^ Write address.
+%  -> Signal (Bits 3)  -- ^ Write channel protection type.
+%  -> Signal Bit       -- ^ Write address valid.
+%  -> Signal Bit       -- ^ Write address ready.
+%  -> Signal (Bits 32) -- ^ Write data.
+%  -> Signal (Bits 4)  -- ^ Write strobes.
+%  -> Signal Bit       -- ^ Write valid.
+%  -> Signal Bit       -- ^ Write ready.
+%  -> Signal (Bits 2)  -- ^ Write response.
+%  -> Signal Bit       -- ^ Write response valid.
+%  -> Signal Bit       -- ^ Response ready.
+%  -> Signal (Bits 32) -- ^ Read address.
+%  -> Signal (Bits 3)  -- ^ Protection type.
+%  -> Signal Bit       -- ^ Read address valid.
+%  -> Signal Bit       -- ^ Read address ready.
+%  -> Signal (Bits 32) -- ^ Read data.
+%  -> Signal (Bits 2)  -- ^ Read response.
+%  -> Signal Bit       -- ^ Read valid.
+%  -> Signal Bit       -- ^ Read ready.    
+%  -> ())
+%\end{code}
+
+% There's a few new types in \codei{axi_light}. The first two types, \codei{HComp} and \codei{HSig}, are both more or less pure hardware programs, but have a type that we can inspect from within Haskell (normally, one cannot inspect the type of functions).
 
 \end{document}

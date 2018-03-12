@@ -49,7 +49,9 @@ Many of the issues faced in heterogeneous computing with low level languages lik
 \section{Functional Programming}
 \label{functional}
 
-Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants. An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
+Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants.
+
+An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 
 A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provide a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and it can be defined as follows:
 
@@ -73,6 +75,12 @@ The other piece of glue code that functional programming languages provides is o
 \end{code}
 
 \noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
+
+Lazy evaluation in Haskell isn't limited to its own functions and values, but extends to functions written in embedded languages as well, like that of our co-design library. For these functions, the laziness of its functions means that only the parts that contribute to the end result will be part of function, that is, no unnecessary code will generated or evaluated for a program.
+
+The other piece of glue code in Haskell, that is, its combinators, are also usable for any embedded functions. This means that we can create programs whose operation is determined by the functions provided by its arguments. For example, we could write a hardware design in our co-design library that changes size according to the kind of inputs or operations it uses.
+
+\todo{Segue to next section.}
 
 \section{Domain Specific Languages}
 \label{domain}

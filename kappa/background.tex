@@ -144,7 +144,9 @@ void fir(int N, int L, double *b, double *x, double *y)
 }
 \end{code}
 
-\noindent Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
+\noindent Here, $N$ is the filter rank, as before, and $L$ is the size of the input---we assume $N$ will be smaller than $256$. The three double pointers $b$, $x$, and $y$ point towards arrays containing the coefficient, input, and output, respectively. As for the functions body, the first for-loop initializes the taps while the second for-loop goes through all of the inputs and shifts them onto the taps and then computes their impulse response.
+
+Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
 
 \begin{code}
 double dot(int N, double *xs, double *ys)

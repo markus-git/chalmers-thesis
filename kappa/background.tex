@@ -106,7 +106,11 @@ While the implementation of shallow and deep embedding are usually at odds, ther
 \section{Embedded Programming in Haskell}
 \label{haskell}
 
-Programming in a functional language like Haskell is different from the imperative programming of C or the hardware descriptions written in VHDL. Ideally, functional languages allows users to write their program as a mathematical function, that is, a function from its inputs to its output. Which is in contrast to the imperative style of programming where users express their program as a series of sequential steps to be executed on some machine. Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
+Programming in a functional language like Haskell is different from the imperative style of programming where users express their program as a series of sequential steps. In Haskell, users write their program as a mathematical function, that is, a function from its inputs to its output. This is in contrast to the imperative style of programming, 
+
+% done in C or the hardware descriptions written in VHDL
+
+% Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
 
 As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. The mathematical definition of a FIR filter of rank $N$ is as follows:
 

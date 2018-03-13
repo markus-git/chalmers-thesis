@@ -101,9 +101,11 @@ Shallowly embedded languages perform quite poorly if we wish to compile the lang
 
 % While the representation of embedded language's syntax tree can become quite large and unwieldy as the set supported operations grows, it is necessary to have one if we would like to do any kind of transform over the representation, or if we wish to introduce another interpretation.
 
-While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we make use of a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide a nice syntax for their functions.
+While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide a nice syntax for their functions.
 
 % The benefits of shallow and deeply embedded are both attractive to have for an EDSL, at least in the sense that a shallow embedding can easily add new language features and a deep embedding supports multiple interpretations.
+
+Now that we have grasp of what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in our co-design library.
 
 \section{Embedded Programming in Haskell}
 \label{haskell}
@@ -146,7 +148,7 @@ void fir(int N, int L, double *b, double *x, double *y)
 }
 \end{code}
 
-\noindent Here, $N$ is the filter rank, as before, and $L$ is the size of the input---we assume $N$ will be smaller than $256$. The three double pointers $b$, $x$, and $y$ point towards arrays containing the coefficient, input, and output, respectively. As for the functions body, the first for-loop initializes the taps while the second for-loop goes through all of the inputs and shifts them onto the taps and then computes their impulse response.
+\noindent Here, $N$ is the filter rank, as before, and $L$ is the size of the input---we assume $N$ will be smaller than $256$. The three variables $b$, $x$, and $y$ point towards arrays containing the coefficient, input, and output, respectively. As for the functions body, the first for-loop initializes the taps while the second for-loop goes through all of the inputs and shifts them onto the taps and then computes their impulse response.
 
 Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
 
@@ -168,38 +170,42 @@ dot :: Num a => [a] -> [a] -> a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent The first helper function, \codei{zipWith}, is a general function for merging lists and is used here to combine the input lists \codei{xs} and \codei{ys} by element wise multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product.
+\noindent The first helper function, \codei{zipWith}, is a general function for merging lists and is used here to combine the input lists \codei{xs} and \codei{ys} by element wise multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
 
-In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+% \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication
 
-% ---\codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication
+% We also define two additional helper functions, namely the \codei{shift} and \codei{step} functions:
 
-We can now implement the FIR filter:
+%\begin{code}
+%push :: a -> [a] -> [a]
+%push x taps = x : init taps
+%
+%step :: [a] -> [a] -> a -> ([a], a)
+%step b taps x = (new, dot b new)
+%  where new = push x taps
+%\end{code}
 
-\begin{code}
-fir :: Num a => [a] -> [a] -> [a]
-fir b xs = snd (mapAccumR step (replicate (length b) 0) xs)
-  where
-    step :: [a] -> a -> ([a], a)
-    step ts i = (x, dot b x)
-      where x = shift i ts
-  
-    shift :: a -> [a] -> [a]
-    shift x xs = x : init xs
-\end{code}
+%\noindent \codei{shift} is designed to manage the filter's taps, as it pushes a new value onto them while at the same time dropping their oldest value. \codei{step} shifts the current input onto the taps and then calculates the output for that time instant, returning a pair of the taps and impulse response.
 
-\noindent In addition to the FIR filter itself, we have also defined two components of the filter as helper functions, namely the \codei{shift} and \codei{step} operations. \codei{shift} manages the filter's taps, as it pushes a new value onto them while at the same time dropping their oldest value. \codei{step} shifts the current input onto the taps and then calculates the output for that time instant, returning a pair of the taps and impulse response.
+%We can now implement the FIR filter:
 
-The filter uses a special mapping function, called \codei{mapAccumR}, which is similar to the earlier \codei{map} function show in section~\ref{functional}, but also carries around an extra value throughout its applications of \codei{step} to the inputs \codei{xs}. For the filter, this extra value is used to hold the filter's taps. The taps are initially a list of zeroes created by Haskell's \codei{replicate} function, and each application of \codei{step} pushes an new input onto the taps. The result of the filter is obtained using \codei{snd}, which throws away the taps and returns only the accumulated outputs.
+%\begin{code}
+%fir :: Num a => [a] -> [a] -> [a]
+%fir b xs = snd (mapAccumR (step b) taps xs)
+%  where
+%    taps = replicate (length b) 0
+%\end{code}
 
-Embedded programming in Haskell is quite similar to the kind of functional programming that we have done so far. In fact, we can reimplement the earlier dot-product as an embedded function in our co-design library without having to change its definition very much at all:
+%The filter uses a special mapping function, called \codei{mapAccumR}, which is similar to the earlier \codei{map} function show in section~\ref{functional}, but also carries around an extra value throughout its applications of \codei{step} to the inputs \codei{xs}. For the filter, this extra value is used to hold the filter's taps. The taps are initially a list of zeroes created by Haskell's \codei{replicate} function, and each application of \codei{step} pushes an new input onto the taps. The result of the filter is obtained using \codei{snd}, which throws away the taps and returns only the accumulated outputs.
+
+Implementing the dot product as an embedded function in our co-design library is not that different from the earlier implementation using regular Haskell. In fact, we can reimplement the dot product without having to change its definition very much at all:
 
 \begin{code}
 dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Its type has grown a bit and is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value. The latter analogy is especially appropritate, as it is in fact possible to evaluate expressions into their equivalent value in Haskell:
+\noindent Its type has grown a bit, and it is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value. The latter analogy is especially appropritate, as it is in fact possible to evaluate expressions into their equivalent value in Haskell:
 
 \begin{code}
 evaluateExp :: Type a => Exp a -> a
@@ -207,7 +213,50 @@ evaluateExp :: Type a => Exp a -> a
 
 \noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type.
 
-Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and interpret an expression in order to support, for example, its compilation into source code or evaluation.
+Text.
+
+\begin{code}
+fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Prog (Arr a)
+fir N b xs =
+  do taps <- initArr (replicate N 0)
+     ys   <- initArr (replicate L 0)
+     for 0 L $ \ix ->
+       do for 1 (N - 1) $ \jx ->
+            do tmp <- getArr taps (jx + 1)
+               setArr taps jx tmp
+          x <- getArr xs ix
+          setArr taps 0 x
+          setArr ys ix (dot b taps)
+     return out
+  where
+    L = length xs
+\end{code}
+
+Text.
+
+\begin{code}
+sums :: (Num a, Typeable a) => [Sig a] -> Sig a
+sums as = foldr (+) 0 as
+
+muls :: (Num a, Typeable a) => [Exp a] -> [Sig a] -> [Sig a]
+muls as bs = zipWith (*) (map repeat as) bs
+
+dels :: Typeable a => Exp a -> Sig a -> [Sig a]
+dels a = iterate (delay a)
+\end{code}
+
+Text.
+
+\begin{code}
+fir :: (Num a, Typeable a) => [Exp a] -> Sig a -> Sig a
+fir xs = sums . muls xs . dels 0
+\end{code}
+
+Text.
+
+\subsubsection{Interpretations}
+
+Evaluating an expression to its equivalent Haskell value is not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and interpret an expression in order to support, for example, its compilation into source code or evaluation.
 
 For the case of evaluating an expression, if we assume the \codei{Exp} is defined as:
 
@@ -226,6 +275,8 @@ evaluateExp (Mult a b) = (evaluateExp a) * (evaluateExp b)
 
 \noindent Each line of \codei{evaluateExp} handles one of the three constructors and translates them into their corresponding Haskell value. The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
 
+\subsubsection{Vectors}
+
 The similarities between the implementation of the embedded and regular dot-products are mostly superficial. This is because, the helper functions used in the embedded variant are not the standard Haskell functions for lists, but rather functions provided by our vector library that share the same names:
 
 \begin{code}
@@ -237,7 +288,7 @@ zipWith :: (Type a, Type b)
 zipWith f a b = map (uncurry f) (zip a b)
 
 sum :: (Num a, Type a) => Vec a -> Exp a
-sum = fold (+) 0
+sum a = fold (+) 0 a
 \end{code}
 
 \noindent where both \codei{zipWith} and \codei{sum} are defined with the help of other vector functions.
@@ -246,12 +297,10 @@ What's interesting about vectors is that they're defined in terms of a regular H
 
 Its no coincident that the definition of vectors is similar to their semantics, as \codei{Vec} is an example of a shallowly embedded data type and the very idea of its representation is to model the operations that can be performed on vectors. This characteristic of shallow embeddings makes it easy to add new functions, but it also makes them difficult to interpret in any way other than the intended one. It is because of this deficiency that vectors are based on the deeply embedded \codei{Exp} type; evaluating \codei{Vec} turns it into one big expression which can then be interpreted.
 
-Compiling the embedded dot-product to C yields the following code:
+%Compiling the embedded dot-product to C yields the following code:
 
-\begin{code}
--- todo: compile dot-product to C and past code here.
-\end{code}
-
-Comments about the code.
+%\begin{code}
+%-- todo: compile dot-product to C and past code here.
+%\end{code}
 
 \end{document}

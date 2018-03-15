@@ -93,9 +93,62 @@ DSLs comes in two fundamentally different forms: external and internal. An exter
 
 Haskell, with its static type system, flexible overloading and lazy semantics, has seen itself as host for a range of EDSLs. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language.
 
-% The advantage of a shallow embedding is that we can quickly calculate the value of a program, we simply evaluate it to get its value.
+We illustrate how shallow embeddings work in Haskell through a small example over integral expressions:
 
-Shallowly embedded languages perform quite poorly if we wish to compile the language; functions only return values and provide no way to look at the representation of a program. To compile an embedded language it is better to use an intermediate representation for functions, which sits between Haskell and the compiled code. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result.
+\begin{code}
+type Exp = Int
+
+const :: Int -> Exp
+const a = a
+
+times :: Exp -> Exp -> Exp
+times a b = a * b
+\end{code}
+
+\noindent Expressions are defined as a type synonym for integers, making use of Haskell's \codei{type} keyword, and the language around our expressions is defined by two functions, one for integer literals, called \codei{const} and another for multiplication, called \codei{times}.
+
+The advantage of a shallow type like \codei{Exp} is that we can quickly calculate its value:
+
+\begin{code}
+eval :: Exp -> Int
+eval a = a
+\end{code}
+
+\noindent Shallowly embedded languages do however perform quite poorly if we wish to compile the language; functions only return values and provide no way to look at the representation of a program. To compile an embedded language it is better to use an intermediate representation for functions, which sits between Haskell and the compiled code. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result.
+
+We reimplement our earlier, shallowly embedded language for integer expressions to make use of a deep embedding instead:
+
+\begin{code}
+data Exp = Const Int | Times Exp Exp
+\end{code}
+
+\noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a pipe. These constructors forms what is often referred to as a syntax tree, and represents the computations behind an expression.
+
+As the type of expressions have changed from being a synonym to a concrete type, we must also change the functions that comes with it:
+
+% Because the previous incarnation of expressions supported literals and multiplication function, we have given our new data type two constructors that represent these two actions. The language around our expressions changes as we 
+
+\begin{code}
+const :: Int -> Exp
+const a = Const a
+
+times :: Exp -> Exp -> Exp
+times a b = Times a b
+\end{code}
+
+\noindent The functions now return a representation of the result rather than the result itself.
+
+The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, is what enables functions to inspect, modify, and interpret an expression in order to support, for example, their evaluation:
+
+\begin{code}
+eval :: Exp -> Int
+eval (Const a)   = a
+eval (Times a b) = (eval a) * (eval b)
+\end{code}
+
+\noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating them into their corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code.
+
+% The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
 
 % which lets us inspect a them rather than simply its result.
 
@@ -254,26 +307,26 @@ fir xs = sums . muls xs . dels 0
 
 Text.
 
-\subsubsection{Interpretations}
+%\subsubsection{Interpretations}
 
-Evaluating an expression to its equivalent Haskell value is not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and interpret an expression in order to support, for example, its compilation into source code or evaluation.
+%Evaluating an expression to its equivalent Haskell value is not the only supported interpretation of expressions. In fact, we could just as well have compiled the same expression to, say, its corresponding C code. The ability to interpret \codei{Exp} in multiple ways comes from the fact that its a deeply embedded type; operations over \codei{Exp} build an interim data structure that describes the expression. For instance, an expression like \codei{a * b} could result in an abstract syntax tree of \codei{Mult (Var ``a'') (Var ``b'')}, representing the multiplication of the two variables \codei{a} and \codei{b}. A Syntax tree like this one is what enables the compiler to inspect, modify, and interpret an expression in order to support, for example, its compilation into source code or evaluation.
 
-For the case of evaluating an expression, if we assume the \codei{Exp} is defined as:
+%For the case of evaluating an expression, if we assume the \codei{Exp} is defined as:
 
-\begin{code}
-data Exp a = Var String | Lit a | Mult (Exp a) (Exp a)
-\end{code}
+%\begin{code}
+%data Exp a = Var String | Lit a | Mult (Exp a) (Exp a)
+%\end{code}
 
-\noindent that is, expressions contain three constructors for variables, literals, and multiplication---Haskell's \codei{data} keyword introduces a new type and its constructors are separated by a pipe---then its evaluation can be defined like so:
+%\noindent that is, expressions contain three constructors for variables, literals, and multiplication---Haskell's \codei{data} keyword introduces a new type and its constructors are separated by a pipe---then its evaluation can be defined like so:
 
-\begin{code}
-evaluateExp :: Type a => Exp a -> a
-evaluateExp (Var v)    = error "open expression."
-evaluateExp (Lit i)    = i
-evaluateExp (Mult a b) = (evaluateExp a) * (evaluateExp b)
-\end{code}
+%\begin{code}
+%evaluateExp :: Type a => Exp a -> a
+%evaluateExp (Var v)    = error "open expression."
+%evaluateExp (Lit i)    = i
+%evaluateExp (Mult a b) = (evaluateExp a) * (evaluateExp b)
+%\end{code}
 
-\noindent Each line of \codei{evaluateExp} handles one of the three constructors and translates them into their corresponding Haskell value. The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
+%\noindent Each line of \codei{evaluateExp} handles one of the three constructors and translates them into their corresponding Haskell value. The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
 
 \subsubsection{Vectors}
 

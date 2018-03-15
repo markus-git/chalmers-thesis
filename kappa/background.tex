@@ -105,7 +105,9 @@ times :: Exp -> Exp -> Exp
 times a b = a * b
 \end{code}
 
-\noindent Expressions are defined as a type synonym for integers, making use of Haskell's \codei{type} keyword, and the language around our expressions is defined by two functions, one for integer literals, called \codei{const} and another for multiplication, called \codei{times}.
+\noindent Expressions are defined as a type synonym for integers, making use of Haskell's \codei{type} keyword, and the language around our expressions is defined by two functions, one for integer literals, called \codei{const} and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're part of the domain.
+
+% Notice that, as , we could add more functions quite easily as long as they're part of the domain.
 
 The advantage of a shallow type like \codei{Exp} is that we can quickly calculate its value:
 
@@ -136,7 +138,7 @@ times :: Exp -> Exp -> Exp
 times a b = Times a b
 \end{code}
 
-\noindent The functions now return a representation of the result rather than the result itself.
+\noindent The functions now return a representation of the result rather than the result itself. Because of this, we can't easily add new functions as we would first have to extend \codei{Exp}.
 
 The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, is what enables functions to inspect, modify, and interpret an expression in order to support, for example, their evaluation:
 

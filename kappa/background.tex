@@ -274,7 +274,7 @@ dot xs ys = sum (zipWith (*) xs ys)
 
 The vector type and its functions are part of the user-facing libraries of the co-design library, and provides a nice syntax for writing array based functions. At its core however, the co-design library is built on a representation imperative programs to model the kind of programs written in C and VHDL. For this reason, the co-design library also provide types for references, arrays, and other common types found in both C and VHDL.
 
-Implementing the full fir-filter in an imperative style with our co-design library is done by using on of its program types. With the help of Haskell's do-syntax, which functions to be written as a series of steps to take, the filter can be implemented using a program type like so:
+Implementing the full FIR filter in an imperative style with our co-design library is done by using on of its program types. With the help of Haskell's do-syntax, which functions to be written as a series of steps to take, the filter can be implemented using a program type like so:
 
 \begin{code}
 fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Prog (Arr a)
@@ -293,27 +293,21 @@ fir N b xs = do
 
 \noindent Notice that $N$, the filters rank, is a pure Haskell value as opposed to an expression. As regular Haskell values are evaluated before a program is compiled, the filter function is actually a kind of generator that produces a specialized filter for each value of $N$. The filter's array operations is supported by the \codei{Arr} type, which provides the \codei{initArr}, \codei{getArr}, and \codei{setArr} functions for managing the creation, indexing, and writing to arrays.
 
-Text.
-
-%\begin{code}
-%sums :: (Num a, Typeable a) => [Sig a] -> Sig a
-%sums as = foldr (+) 0 as
-
-%muls :: (Num a, Typeable a) => [Exp a] -> [Sig a] -> [Sig a]
-%muls as bs = zipWith (*) (map repeat as) bs
-
-%dels :: Typeable a => Exp a -> Sig a -> [Sig a]
-%dels a = iterate (delay a)
-%\end{code}
-
 %Text.
 
 %\begin{code}
-%fir :: (Num a, Typeable a) => [Exp a] -> Sig a -> Sig a
-%fir xs = sums . muls xs . dels 0
+%fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Design (Arr a)
+%fir N b xs = do
+%  taps <- initArr (replicate N 0)
+%  ys   <- initArr (replicate (length xs) 0)
+%  for 1 (lit N) $ \jx -> do
+%    tmp <- getArr taps (jx - 1)
+%    setArr taps jx tmp
+%  x <- getArr xs ix
+%  setArr taps 0 x
+%  setArr ys ix (dot b taps)
+%  return ys
 %\end{code}
-
-%Text.
 
 %\subsubsection{Interpretations}
 

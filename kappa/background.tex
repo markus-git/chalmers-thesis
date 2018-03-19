@@ -260,7 +260,9 @@ dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Its type has grown a bit, and it is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types are part of our co-design library, and provides operations that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value---like the deeply embedded expressions from section~\ref{domain}.
+\noindent Its type has grown a bit, and it is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types provide functions that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value---like the deeply embedded expressions from section~\ref{domain}.
+
+% These types are part of our co-design library
 
 %The latter analogy is especially appropritate, as it is in fact possible to evaluate expressions into their equivalent value in Haskell:
 
@@ -270,24 +272,26 @@ dot xs ys = sum (zipWith (*) xs ys)
 
 %\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type.
 
-Text.
+The vector type and its functions are part of the user-facing libraries of the co-design library, and provides a nice syntax for writing array based functions. At its core however, the co-design library is built on a representation imperative programs to model the kind of programs written in C and VHDL. For this reason, the co-design library also provide types for references, arrays, and other common types found in both C and VHDL.
+
+Implementing the full fir-filter in an imperative style with our co-design library is done by using on of its program types. With the help of Haskell's do-syntax, which functions to be written as a series of steps to take, the filter can be implemented using a program type like so:
 
 \begin{code}
 fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Prog (Arr a)
-fir N b xs =
-  do taps <- initArr (replicate N 0)
-     ys   <- initArr (replicate L 0)
-     for 0 L $ \ix ->
-       do for 1 (N - 1) $ \jx ->
-            do tmp <- getArr taps (jx + 1)
-               setArr taps jx tmp
-          x <- getArr xs ix
-          setArr taps 0 x
-          setArr ys ix (dot b taps)
-     return out
-  where
-    L = length xs
+fir N b xs = do
+  taps <- initArr (replicate N 0)
+  ys   <- initArr (replicate (length xs) 0)
+  for 0 L $ \ix -> do
+    for 1 (lit N) $ \jx -> do
+      tmp <- getArr taps (jx - 1)
+      setArr taps jx tmp
+    x <- getArr xs ix
+    setArr taps 0 x
+    setArr ys ix (dot b taps)
+  return ys
 \end{code}
+
+\noindent Notice that $N$, the filters rank, is a pure Haskell value as opposed to an expression. As regular Haskell values are evaluated before a program is compiled, the filter function is actually a kind of generator that produces a specialized filter for each value of $N$. The filter's array operations is supported by the \codei{Arr} type, which provides the \codei{initArr}, \codei{getArr}, and \codei{setArr} functions for managing the creation, indexing, and writing to arrays.
 
 Text.
 

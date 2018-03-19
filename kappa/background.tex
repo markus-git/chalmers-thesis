@@ -293,6 +293,12 @@ fir N b xs = do
 
 \noindent Notice that $N$, the filters rank, is a pure Haskell value as opposed to an expression. As regular Haskell values are evaluated before a program is compiled, the filter function is actually a kind of generator that produces a specialized filter for each value of $N$. The filter's array operations is supported by the \codei{Arr} type, which provides the \codei{initArr}, \codei{getArr}, and \codei{setArr} functions for managing the creation, indexing, and writing to arrays.
 
+\todo{Compile to C code and comment on the generated code.}
+
+\begin{code}
+// C code.
+\end{code}
+
 %Text.
 
 %\begin{code}

@@ -126,13 +126,13 @@ fir N b xs = do
   return ys
 \end{code}
 
-Text.
+Connecting the FIR filter to a simple main program that supplies an example arrays for its coefficients and input lets us instantiate the code in, for example, the software monad and compile it to C:
 
 \begin{code}
 // C code.
 \end{code}
 
-Text.
+While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter.
 
 \begin{code}
 firH :: (Num a, HType a) => Int -> HArr a -> Signal a -> Signal a

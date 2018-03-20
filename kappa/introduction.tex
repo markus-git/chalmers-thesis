@@ -53,7 +53,8 @@ This thesis presents the first steps towards a functional programming language i
 Text.
 
 \begin{code}
-dot :: SArr Int32 -> SArr Int32 -> Software (SRef Int32)
+dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
+    -> m (Ref m Int32)
 dot xs ys =
   do sum <- initRef 0
      for 0 len $ \ix ->
@@ -69,42 +70,39 @@ dot xs ys =
 Text.
 
 \begin{code}
-program :: Software ()
-program =
- do -- todo: read input arrays in a nice way.
-    r   <- dot xs ys
-    sum <- getRef ref
-    printf "sum: %d" sum
+dotVec :: (Pully exp vec Int32, Type exp Int32) => vec -> vec -> a
+dotVec a b = sum (zipWith (*) a b)
 \end{code}
 
-Text.
+%\begin{code}
+%program :: Software ()
+%program =
+% do -- todo: read input arrays in a nice way.
+%    r   <- dot xs ys
+%    sum <- getRef ref
+%    printf "sum: %d" sum
+%\end{code}
 
-\begin{code}
-dot :: (Monad m, Arrays m, Control m, TypeM m Int32)
-  => Arr m Int32 -> Arr m Int32 -> m (Exp m Int32)
-\end{code}
+%\begin{code}
+%dot :: (Monad m, Arrays m, Control m, TypeM m Int32)
+%  => Arr m Int32 -> Arr m Int32 -> m (Exp m Int32)
+%\end{code}
 
-Text.
+%\begin{code}
+%dotSig :: Signature (HArr Int32 -> HArr Int32 -> HRef Int32)
+%dotSig = inpArr 16 $ \xs -> inpArr 16 $ \ys -> ret $ dot xs ys
+%\end{code}
 
-\begin{code}
-dotSig :: Signature (HArr Int32 -> HArr Int32 -> HRef Int32)
-dotSig = inpArr 16 $ \xs -> inpArr 16 $ \ys -> ret $ dot xs ys
-\end{code}
-
-Text.
-
-\begin{code}
-offloaded :: Software ()
-offloaded =
-  do -- todo: read input arrays in a nice way.
-     comp <- mmap "0x83C0_0000" dotSig
-     r    <- newRef
-     call comp (xs :> ys :> r)
-     sum <- getRef r
-     printf "sum: %d" sum
-\end{code}
-
-Text.
+%\begin{code}
+%offloaded :: Software ()
+%offloaded =
+%  do -- todo: read input arrays in a nice way.
+%     comp <- mmap "0x83C0_0000" dotSig
+%     r    <- newRef
+%     call comp (xs :> ys :> r)
+%     sum <- getRef r
+%     printf "sum: %d" sum
+%\end{code}
 
 This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
 

@@ -108,6 +108,8 @@ class Monad m => Control m where
 
 While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective monads.
 
+As an example of language specific functions, we will revisit the FIR filter from section~\ref{haskell}. Reimplementing the filter as a generic program with is straightforward: the types used in the old filter were simply type synonyms for software types, so we only need to update the function's type to make use of generic arrays and monads instead:
+
 \begin{code}
 fir :: (Num a, TypeM m a, Arrays m, Control m) => Int -> Arr m a -> Arr m a
     -> m (Arr m a)

@@ -27,6 +27,7 @@ Starting with a single Haskell program, our co-design library is designed with t
 % Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
 \section{Particular Programs}
+\label{program}
 
 While C and VHDL are designed with different tasks in mind, both languages are imperative in nature. Because of this, our co-design library is built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
 
@@ -153,30 +154,34 @@ Text.
 \section{Embedded Expressions}
 \label{expr}
 
-A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a value:
+A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a software value:
 
 \begin{code}
 squareS :: SExp Int32 -> SExp Int32
 squareS a = a * a
 \end{code}
 
-\noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$. Expressions are however a deeply embedded type, as mentioned in section~\ref{haskell}, and evaluation therefore is not the only interpretation that they support. For instance, this squaring expressions could just as well be compiled to C code when used inside a software program.
+% \noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$. Expressions are however a deeply embedded type, as mentioned in section~\ref{haskell}, and evaluation therefore is not the only interpretation that they support. For instance, this squaring expressions could just as well be compiled to C code when used inside a software program.
 
-Just as the software programs from section~\ref{codesign} had a corresponding type used for hardware programs, \codei{SExp} also has a corresponding hardware type for expressions called \codei{HExp}. The squaring function can be implemented using hardware expressions by simply changing its type:
+Just as the software programs from section~\ref{program} have a corresponding type used for hardware programs, \codei{SExp} have a corresponding hardware type for expressions called \codei{HExp}:
+
+% The squaring function can be implemented using hardware expressions by simply changing its type:
 
 \begin{stub}
 squareH :: HExp Int32 -> HExp Int32
 squareH a = a * a
 \end{stub}
 
-Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. There is no software or hardware specific characteristics in either squaring function; the expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations.
+Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. The expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations.
+
+% There is no software or hardware specific characteristics in either squaring function,
 
 \begin{code}
-square :: (Num (exp a), Type' exp a) => exp a -> exp a
+square :: (Num (exp a), Type exp a) => exp a -> exp a
 square a = a * a
 \end{code}
 
-\noindent Note that the type constraint is slightly different from previous functions, as it makes us of \codei{Type'} instead of \codei{Type}. The former type constraint is designed for functions are parameterized on their expression type, while the latter is used with monads.
+\noindent Note that the type constraint is slightly different from previous functions, as it makes us of \codei{Type} instead of \codei{TypeM}. The former type constraint is designed for functions are parameterized on their expression type, while the latter is used with monads.
 
 In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, it can be a complex data type. For example, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
 
@@ -201,7 +206,7 @@ distProg = do
 Compiling \codei{distProg} produces the following code:
 
 \begin{code}
-Compile code and past result here.
+// C code.
 \end{code}
 
 \noindent Note that there are no pairs in the generated C code, as the different coordinates simply become four separate references to the two input variables.

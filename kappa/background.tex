@@ -280,7 +280,7 @@ Implementing the full FIR filter in an imperative style with our co-design libra
 fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Prog (Arr a)
 fir N b xs = do
   taps <- initArr (replicate N 0)
-  ys   <- initArr (replicate (length xs) 0)
+  ys   <- newArr  (length xs)
   for 0 L $ \ix -> do
     for 1 (lit N) $ \jx -> do
       tmp <- getArr taps (jx - 1)

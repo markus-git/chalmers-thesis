@@ -20,11 +20,19 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate code for both the software and hardware parts, and to generate a combination of software and hardware code for the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
+In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support.
+
+Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
+
+% Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
 \section{Particular Programs}
 
-C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with. While these two languages are designed with different tasks in mind, both C and VHDL are imperative languages in their nature. Because of this, our co-design library is built on a deep embedding of monads as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program. The general idea is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to programs written in a stateful monad. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
+While C and VHDL are designed with different tasks in mind, both languages are imperative in nature. Because of this, our co-design library is built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
+
+The general idea behind our monadic backend is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
+
+% C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with. 
 
 As an example of the similarities between monads and imperative programs, consider a software program for reversing an array:
 
@@ -33,40 +41,47 @@ reverseS :: SArr Int32 -> Software ()
 reverseS arr =
   for 0 (len `div` 2) $ \ix -> do
     aix <- getArr arr ix
-    ajx <- getArr arr (len - ix)
+    ajx <- getArr arr (len - ix - 1)
     setArr arr ix ajx
-    setArr arr (len - ix) aix
+    setArr arr (len - ix - 1) aix
   where
     len = length arr
 \end{code}
 
-\noindent Its type tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type of the software program is empty as the array is reversed in place. The two array operations for reading and writing to an array, \codei{getArr} and \codei{setArr}, behave as you would expect them to: \codei{getArr} takes an array and an index, and returns the array's value at that index; \codei{setArr} takes an array, an index and a value, and stores the value in the array.
+\noindent Its type tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type of the software program is empty as the array is reversed in place.
 
-The implementation of \codei{reverseS} has the look and feel of a imperative program, sans a few syntactical differences, as it loops over the first half of the array's indices. For each of these indices, \codei{ix}, it reads two values from the array at the leftmost and rightmost places, offset by the index. Having read and stored these two values into the \codei{aix} and \codei{ajx} variables, they are then put back into the array at the opposite place. This process of flipping pairs of values will eventually result in a reversed array when the two indexed values meet in the middle. 
+The implementation of \codei{reverseS} has the look and feel of a imperative program, sans a few syntactical differences, as it iterating over the input array with a for loop and swaps values from the left side with their opposite position on the right. As a result, the translation of \codei{reverseS} to, for example, C code is straightforward: we simply translate each statement to their corresponding statement in C. % We can even translate each statement individually, as monads take care of the program structure.
+
+% \codei{reverseS} makes use of two array operations for reading and writing to an array, \codei{getArr} and \codei{setArr}, which behave as you would expect them to: \codei{getArr} takes an array and an index, and returns the array's value at that index; \codei{setArr} takes an array, an index and a value, and stores the value in the array.
+
+% For each of these indices, \codei{ix}, it reads two values from the array at the leftmost and rightmost places, offset by the index. Having read and stored these two values into the \codei{aix} and \codei{ajx} variables, they are then put back into the array at the opposite place. This process of flipping pairs of values will eventually result in a reversed array when the two indexed values meet in the middle. 
+
+% , as it loops over the first half of the array's indices
 
 While the type of \codei{reverseS} is that of a software function, there's nothing software specific about it. For-loops and arrays are both part of most imperative languages, including VHDL. We could therefore have implemented the reverse function in hardware as well. In fact, we can define a hardware version of the reverse function simply by changing its type, keeping its body intact:
 
 \begin{code}
 reverseH :: HArr Int32 -> Hardware ()
-reverseH arr =
-  for 0 (len `div` 2) $ \ix -> do
-    aix <- getArr arr ix
-    ajx <- getArr arr (len - ix)
-    setArr arr ix ajx
-    setArr arr (len - ix) aix
-  where
-    len = length arr
+reverseH arr = undefined -- same as before.
 \end{code}
 
-The fact that we were able to define both the \codei{reverseS} and \codei{reverseH} functions by using the same implementation body hints that having them marked as software and hardware specific programs was unnecessary. We would be better off keeping the reverse function generic in order to allow it to be used with both languages. After all, the function only requires that its implementer support the for-loop and array operations it uses. This kind of generic functions are supported by the co-design library through its use of type classes, which enables us to put additional constraints on what classes of operations are necessary in order to implement a function and thus which languages is can be instantiate in. For the reverse function, we could give it the following type:
+The fact that we were able to define both the \codei{reverseS} and \codei{reverseH} functions by using the same implementation body hints that having them marked as software and hardware specific programs was unnecessary; we would have be better off keeping the function generic and thus reusable with both languages.
+
+% After all, the function only requires that its implementer support the for-loop and array operations it uses.
+
+Generic functions that can be interpreted as both software and hardware are supported by the co-design library through its use of type classes: classes lets us put additional constraints on a function that says which operations is required by the language that wants to use it. For instance, the reverse function could be given the following, generic type:
+
+% Classes which enables us to put additional constraints on what classes of operations are necessary in order to implement a function and thus which languages is can be instantiate in. For the reverse function, we could give it the following type:
 
 \begin{code}
 reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
-  => Arr m Int32 -> m ()
+        => Arr m Int32 -> m ()
 reverse arr = undefined -- same as before.
 \end{code}
 
-\noindent The previous array types of \codei{SArr} and \codei{HArr} are substituted for the more general array type of \codei{Arr}, which is parameterized on the monad \codei{m}. Having the extra parameter on \codei{Arr} lets the type be used with any monad that supports arrays and will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their corresponding software and hardware language.
+\noindent The previous array types of \codei{SArr} and \codei{HArr} are substituted for the more general array type of \codei{Arr}, which is parameterized on the monad \codei{m}. The general idea is that \codei{Arr} will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their respective monads.
+
+% Having the extra \codei{m} parameter on \codei{Arr} lets the type be used with any monad that supports arrays.
 
 The new, and now generic, function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
 

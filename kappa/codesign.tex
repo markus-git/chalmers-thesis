@@ -69,7 +69,9 @@ The fact that we were able to define both the \codei{reverseS} and \codei{revers
 
 % After all, the function only requires that its implementer support the for-loop and array operations it uses.
 
-Generic functions that can be interpreted as both software and hardware are supported by the co-design library through its use of type classes: classes lets us put additional constraints on a function that says which operations is required by the language that wants to use it. For instance, the reverse function could be given the following, generic type:
+Generic functions that can be interpreted as both software and hardware are supported by the co-design library through its use of type classes: classes lets us put additional constraints on a function that says which operations is required by the language that wants to use it. For instance, the reverse function could be given the following type:
+
+% , generic type:
 
 % Classes which enables us to put additional constraints on what classes of operations are necessary in order to implement a function and thus which languages is can be instantiate in. For the reverse function, we could give it the following type:
 
@@ -83,7 +85,9 @@ reverse arr = undefined -- same as before.
 
 % Having the extra \codei{m} parameter on \codei{Arr} lets the type be used with any monad that supports arrays.
 
-The new, and now generic, function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
+The new, and now generic, function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two classes ensure the for-loop and array operations used by the reverse function will be supported and are, at least in part, given by the following interface:
+
+% These two classes ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
 
 \begin{code}
 class Monad m => Arrays m where
@@ -97,9 +101,54 @@ class Monad m => Control m where
       -> m ()
 \end{code}
 
-\noindent These list the operations associated with each class and, in the case of arrays, the type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}. The \codei{TypeM} and \codei{Exp} types introduced here are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
+\noindent These list the operations associated with each class and, in the case of arrays, the array type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}.
+
+% The \codei{TypeM} and \codei{Exp} types introduced here are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
 
 While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective monads.
+
+\begin{code}
+fir :: (Num a, TypeM m a, Arrays m, Control m) => Int -> Arr m a -> Arr m a
+    -> m (Arr m a)
+fir N b xs = do
+  taps <- initArr (replicate N 0)
+  ys   <- newArr  (length xs)
+  for 0 L $ \ix -> do
+    for 1 (lit N) $ \jx -> do
+      tmp <- getArr taps (jx - 1)
+      setArr taps jx tmp
+    x <- getArr xs ix
+    setArr taps 0 x
+    setArr ys ix (dot b taps)
+  return ys
+\end{code}
+
+Text.
+
+\begin{code}
+// C code.
+\end{code}
+
+Text.
+
+\begin{code}
+firH :: (Num a, HType a) => Int -> HArr a -> Signal a -> Signal a
+     -> Hardware ()
+firH N b xs ys = process (xs .: []) $ do
+  taps <- initArr (replicate N 0)
+  for 1 (lit N) $ \jx -> do
+    tmp <- getArr taps (jx - 1)
+    setArr taps jx tmp
+  x <- getSignal xs
+  setArr taps 0 x
+  setSignal ys (dot b taps)
+\end{code}
+
+Text.
+
+\begin{code}
+// VHDL code.
+\end{code}
 
 \section{Embedded Expressions}
 \label{expr}

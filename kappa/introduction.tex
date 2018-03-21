@@ -67,12 +67,13 @@ dot xs ys =
     len = max (length xs) (length ys)
 \end{code}
 
-\noindent Text
+Notice that the above \codei{dot} function does not mention any software specific types; \codei{dot} only makes use of two array, a reference, a for-loop, and a few logical and numerical expressions. As a result, the function's type is kept general in the sense that its parameterized on the language \codei{m} that it will eventually be instantiated in---whether \codei{m} is a software or hardware language is not yet decided. The constraint \codei{MonadComp} on \codei{m} ensure that whichever language \codei{m} ends up as will support the necessary operations.
 
-Text.
+While the imperative implementation of the \codei{dot} function is already convenient for software realization, with the optional use as a hardware design, a pure and functional description can sometimes yield a nicer description. For this reason, our language also provide a library based on push and pull vectors~\cite{claessen2012} that facilitates a nice syntax for writing functions over vectors. For example, the dot product could be implemented with vectors as:
 
 \begin{code}
-dotVec :: (Pully exp vec Int32, Type exp Int32) => vec -> vec -> a
+dotVec :: (Vector exp, Type exp Int32) => Pull exp Int32 -> Pull exp Int32
+       -> exp Int32
 dotVec a b = sum (zipWith (*) a b)
 \end{code}
 

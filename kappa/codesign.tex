@@ -20,9 +20,7 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support.
-
-Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
+In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
 
 % Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 
@@ -135,13 +133,13 @@ Connecting the FIR filter to a simple main program that supplies an example arra
 While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter. Signals and processes are hardware specific types, so in order to use them, we first change the type of the filter so that its a hardware specific function:
 
 \begin{code}
-firH :: (Num a, HType a) => Int -> HVArr a -> Signal a
+firH :: (Num a, HType a) => Int -> HArr a -> Signal a
      -> Hardware (Signal a)
 \end{code}
 
 % \noindent Note that, in order to make the filter implementation a bit shorter, we given the output signal as an argument to the filter.
 
-\todo{Making the change from generic arrays to signals means that we also have to update the function's body in order to reflect its new types. For signals, the difference is that values are now processed one by one instead of chunks, that is, rather that iterating over an input array we will have to process an input signal and react to its changes in value with a process:}
+Making the change from generic arrays to signals means that we also have to update the function's body in order to reflect its new types. For signals, the difference is that values are now processed one by one instead of chunks, that is, rather that iterating over an input array we will have to process an input signal and react to its changes in value with a process:
 
 \begin{code}
 firH N b xs ys = do
@@ -157,9 +155,9 @@ firH N b xs ys = do
   return ys
 \end{code}
 
-\noindent \todo{Note that, the arrays used for taps is held by a signal, while the array type used for coefficients uses a variable.}
+\noindent Note that, the arrays used for taps and coefficients are held by signals.
 
-\todo{Connecting the hardware filter to a main program body that supplies it with its inputs and compiling it produces the following VHDL design:}
+Connecting the hardware filter to a main program body that supplies it with its inputs and compiling it produces the following VHDL design:
 
 \begin{code}
 // VHDL code.
@@ -168,7 +166,7 @@ firH N b xs ys = do
 \section{Embedded Expressions}
 \label{expr}
 
-A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. This process is often referred to as evaluation. As an example, consider a function for squaring a software value:
+A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. As an example, consider a function for squaring a software value:
 
 \begin{code}
 squareS :: SExp Int32 -> SExp Int32

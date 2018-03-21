@@ -44,13 +44,13 @@ A substantial amount of research has gone into addressing the challenges of prog
 
 % Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
 
-Another group of languages whom I believe have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation.
+Another group of languages that have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation.
 
 % That is, functional programming separates the definition and evaluation of its functions, and functions could, for example, be run in parallel, as long as their dependencies are covered. Functional languages are however rarely considered for embedded system development, as its difficult to give performance guarantees and resource bounds for its programs.
 
 This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
 
-Text.
+As an example, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors. In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution is possible to describe in our functional language, as it provides a model of imperative programs:
 
 \begin{code}
 dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
@@ -66,6 +66,8 @@ dot xs ys =
   where
     len = max (length xs) (length ys)
 \end{code}
+
+\noindent Text
 
 Text.
 

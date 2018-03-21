@@ -22,13 +22,13 @@
 
 High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors and application specific integrated circuits (ASICs).
 
-% Processors are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, ASICs implement a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
+% Processors are highly programmable systems but often inefficient in terms of power consumption and performance. In contrast, an ASIC implements a fixed function and can therefore provide good power and performance characteristics, but any changes to its functionality requires a new circuit to be designed. 
 
-Processors and ASICs represent two extremes of available architectures, where field programmable gate arrays (FPGAs) have found a good middle-ground and provides the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. A modern FPGA also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
+While processors and ASICs represent two extremes of available architectures, field programmable gate arrays (FPGAs) have found a good middle-ground and provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various discrete components and co-processors, which together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
 
 % FPGAs typically consists of a large array of configurable logic blocks, connected by programmable interconnects.
 
-While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. Their logic blocks are usually programmed in a hardware description language, while the embedded processors are programmed in a low level dialect of C or even assembler. Furthermore, the various components of a modern FPGA may support different intrinsics, leading to incompatibilities between the code they can execute even if they are programmed in the same language.
+While modern FPGAs show great promise as a prototypical system for heterogeneous computing, their adoption has been slowed by the fact that they're difficult to program. The logic blocks are usually programmed in a hardware description language, while the embedded processors are programmed in a low level dialect of C or even assembler. Furthermore, the various components of a modern FPGA may support different intrinsics, leading to incompatibilities between the code they can execute even if they are programmed in the same language.
 
 % The use of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, such languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
 
@@ -36,9 +36,11 @@ While modern FPGAs show great promise as a prototypical system for heterogeneous
 
 % In the design of a heterogeneous systems there is concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
 
-One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities and differences thereof. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component.
+One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component.
 
-The issues above issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for component to another is typically a major undertaking.
+% and differences thereof
+
+The issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for one component to another is typically a major undertaking.
 
 Many of the issues faced in heterogeneous computing with low level languages like C and HDLs stem from a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues of, for instance, functionality and architecture come as a indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately, as it allows us to create small, reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve larger problems.
 
@@ -49,11 +51,13 @@ Many of the issues faced in heterogeneous computing with low level languages lik
 \section{Functional Programming}
 \label{functional}
 
-Functional programming, as the name implies, is based around the application of functions to its arguments. In this programming style, programs are written as functions that accept input and delivers its result. These functions are themselves defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of language primitives such as built-in functions, variables or constants.
+Functional programming, as the name implies, is based around the application of a function to its arguments. In this programming style, a program is written as a function that accept input and deliver its result. This function itself is defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of nothing but language primitives, such as built-in functions, variables or constants.
 
-An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects and their definitions and evaluation are thus separated; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
+An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 
-A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provide a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and it can be defined as follows:
+% and that their definitions and evaluation are thus separated
+
+A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and it can be defined as follows:
 
 \begin{code}
 map :: (a -> b) -> [a] -> [b]
@@ -67,6 +71,8 @@ A function's type comes after the \codei{::} sign, and in the case of \codei{map
 
 The second and third line of \codei{map} validates our earlier guess and lists the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
 
+The usefulness of higher-order functions extend to any emedded language as well, as they can encode common patterns. For example, we could have written a function that composes a list of hardware designs in series, and then another function composes $N$ copies of the given design. 
+
 The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g <> f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
 
 \begin{code}
@@ -76,9 +82,9 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
 
-Lazy evaluation in Haskell isn't limited to its own functions and values, but extends to functions written in embedded languages as well, like that of our co-design library. For these functions, the laziness of its functions means that only the parts that contribute to the end result will be part of function, that is, no unnecessary code will generated or evaluated for a program.
+Lazy evaluation in Haskell isn't limited to its own functions and values, but extends to functions written in embedded languages as well, like that of our co-design library. For these functions, the laziness of its functions means that only the parts that contribute to the end result will be part of function, that is, no unnecessary code will generated or evaluated for a program. As we will see later on, this property is especially useful for vectors as it can guarantee fusion.
 
-The other piece of glue code in Haskell, that is, its combinators, are also usable for any embedded functions. This means that we can create programs whose operation is determined by the functions provided by its arguments. For example, we could write a hardware design in our co-design library that changes size according to the kind of inputs or operations it uses.
+% The other piece of glue code in Haskell, that is, its combinators, are also usable for any embedded functions. This means that we can create programs whose operation is determined by the functions provided by its arguments. For example, we could write a hardware design in our co-design library that changes size according to the kind of inputs or operations it uses.
 
 So far, we have looked at a few Haskell functions as an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell functions. The following section introduces the concept of domain specific languages, and explains what explains what it entails to be an embedded domain specific language in Haskell.
 
@@ -91,7 +97,7 @@ DSLs comes in two fundamentally different forms: external and internal. An exter
 
 % Embedded languages can have the look and feel of a stand-alone language, but reuse many parts of the host-language's ecosystem and semantics to lower the cost to develop and maintain them.
 
-Haskell, with its static type system, flexible overloading and lazy semantics, has seen itself as host for a range of EDSLs. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language.
+Haskell, with its static type system, flexible overloading and lazy semantics, has come to host a range of EDSLs~\cite{elliott2003}. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell~\cite{leijen2002, hughes1995, bjesse1998}. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language.
 
 We illustrate how shallow embeddings work in Haskell through a small example over integral expressions:
 

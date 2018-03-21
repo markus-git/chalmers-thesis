@@ -36,7 +36,7 @@ Heterogeneous computing represents an interesting development towards the goal o
 
 % Furthermore, the structure of application code typically vary between co-processors and any code written for one therefore requires modification when given a new target. In fact, despite all the advantages heterogeneous systems offer, their use so far has been mostly restricted to hardware programmers.
 
-A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C for specific co-processors. While these languages are good for extracting maximum performance from a processor, they provide little to no abstractions for alleviate the task of programming for heterogenous systems.
+A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C for specific co-processors and GPUs. While these languages are good for extracting maximum performance from a processor, they provide little to no abstractions for alleviate the task of programming for heterogenous systems.
 
 % such as VHDL and Verilog
 
@@ -44,7 +44,9 @@ A substantial amount of research has gone into addressing the challenges of prog
 
 % Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
 
-Another group of languages that have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation.
+Another group of languages that have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation. \todo{Bluespec SystemVerilog~\cite{nikhil2004}, for example, is a functional language that provides high-level synthesis of its rule based programs into RTL.}
+
+% Bluespec~\cite{nikhil2004}
 
 % That is, functional programming separates the definition and evaluation of its functions, and functions could, for example, be run in parallel, as long as their dependencies are covered. Functional languages are however rarely considered for embedded system development, as its difficult to give performance guarantees and resource bounds for its programs.
 

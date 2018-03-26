@@ -44,7 +44,7 @@ A substantial amount of research has gone into addressing the challenges of prog
 
 % Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
 
-Another group of languages that have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation. \todo{Bluespec SystemVerilog~\cite{nikhil2004}, for example, is a functional language that provides high-level synthesis of its rule based programs into RTL.}
+Another group of languages that have shown success in describing hardware designs are functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a seperate matter from their evaluation. Bluespec SystemVerilog~\cite{nikhil2004}, for example, is a functional language that provides high-level synthesis of its rule based programs into RTL.
 
 % Bluespec~\cite{nikhil2004}
 
@@ -52,21 +52,31 @@ Another group of languages that have shown success in describing hardware design
 
 This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
 
-%As an example, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors. In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution is possible to describe in our functional language, as it provides a model of imperative programs:
+Instead of taking on the full challenge of heterogeneous programming head on, we are currently interested in a more modest approach: develop a language where experiment with software and hardware boundaries, embed it in Haskell, and see how far we can get in the design of a modern FPGA. The language aims to raise the abstraction level of numerical processing and digital signal processing for embedded systems.
+
+Modern FPGAs show a lot of promise in heterogeneous computing as they combine programmable logic, discrete components and various co-processors with a good performance per Watt ration, all on a single system. Although this diversity of components is good for performance, it does make the system harder to program: its programmable logic is often described in a hardware description language while co-processors are described in a low-level dialect of C.
+
+So, starting with a single functional program, our co-design library is faced with three tasks: generate software for the application parts, hardware for the logical parts, and a mixture of software and hardware for the communication between components. As an example, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors:
+
+% In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution is possible to describe in our functional language, as it provides a model of imperative programs:
 
 \begin{code}
 dot :: Vec Int32 -> Vec Int32 -> Prog (Exp Int32)
 dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-Text.
+Note that the dot function does not mention any software or hardware specific types or functions; \codei{dot} only makes use of vectors and a few numerical expressions. As a result, the function's type is kept general in the sense that it can be realized in both hardware and software. However, lets assume for the sake of our example that we wish to put the dot product on hardware. The function itself can already be compiled to VHDL, but in order to make it accessible in software we must first give it a signature:
 
 \begin{code}
-component :: Signature (Arr Int32 -> Arr Int32 -> Ref Int32 -> ())
-component = inputArray $ \xs -> inputArray $ \ys -> returnVal $ dot xs ys
+component :: Signature (Vec Int32 -> Vec Int32 -> Exp Int32)
+component = inputVec 4 $ \xs -> inputVec 4 $ \ys -> returnVal $ dot xs ys
 \end{code}
 
-Text.
+\noindent Signatures, like the above one, describes a function's type in such a way that it can be inspected from within Haskell. In the case of our dot product, the signature tells us that it takes two input vectors of length four and returns a single value.
+
+Having access to a description of hardware component enables us to connect it with an interconnect and put onto hardware as a physical component, which can then be memory-mapped into from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, the component can be reached by simply reading and writing to ordinary pointers into the components physical address.
+
+With the hardware component address in hand, we can write a small software program that addresses our dot product component and feeds it with two example arrays and prints its result:
 
 \begin{code}
 program :: Soft ()
@@ -74,11 +84,16 @@ program = do
   dot <- mmap "0x83C0_0000" component
   xs  <- initArray [1,2,3,4]
   ys  <- initArray [5,6,7,8]
-  r   <- newRef
-  call dot (xs :. ys :. r :. [])
+  ref <- call dot (xs :. ys)
+  v   <- getRef ref
+  printf "sum: %d" v
 \end{code}
 
-Text.
+\noindent Here, the memory mapping itself is done by the \codei{mmap} function, and returns a software pointer to the components address. The component is then called with two example arrays and returns reference to its result, which is printed to standard output.
+
+% The kind of imperative program ..
+
+% \noindent Note that the list of arguments for the component is constructed in such a way that matches their types against the type of the component, ensuring ...
 
 %\begin{code}
 %dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
@@ -151,7 +166,7 @@ Text.
 %     printf "sum: %d" sum
 %\end{code}
 
-% This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
+This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
 
 % ToDo: Limit to FPGAs.
 

@@ -20,7 +20,9 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support. So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
+In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support.
+
+% So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
 
 % Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
 

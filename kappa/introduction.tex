@@ -84,12 +84,20 @@ program = do
   dot <- mmap "0x83C0_0000" component
   xs  <- initArray [1,2,3,4]
   ys  <- initArray [5,6,7,8]
-  ref <- call dot (xs :. ys)
+  ref <- call dot (xs .: ys)
   v   <- getRef ref
   printf "sum: %d" v
 \end{code}
 
-\noindent Here, the memory mapping itself is done by the \codei{mmap} function, and returns a software pointer to the components address. The component is then called with two example arrays and returns reference to its result, which is printed to standard output.
+\noindent Here, the memory mapping itself is done by the \codei{mmap} function, and returns a software pointer to the components address. The component is then called with two example arrays and returns a reference to its result, which is printed to standard output.
+
+Our example program has the look and feel of an imperative program, sans a few syntactical differences. This similarity is very much intentional, as the library, at its core, is a model of the imperative languages C and VHDL. In fact, the operations in our example can be directly translated into statements in C---\codei{mmap} and \codei{call} are specific to C. Compiling the example yields the following code:
+
+% The vector library, as shown in the implementation of the dot product, is one of our user-facing libraries that are built on ...
+
+\begin{code}
+// C code and VHDL snippet (minus the communicating bits).
+\end{code}
 
 % The kind of imperative program ..
 

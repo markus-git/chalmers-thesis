@@ -52,45 +52,71 @@ Another group of languages that have shown success in describing hardware design
 
 This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
 
-As an example, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors. In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution is possible to describe in our functional language, as it provides a model of imperative programs:
+%As an example, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors. In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution is possible to describe in our functional language, as it provides a model of imperative programs:
 
 \begin{code}
-dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
-    -> m (Ref m Int32)
-dot xs ys =
-  do sum <- initRef 0
-     for 0 len $ \ix ->
-       do x <- getArr xs ix
-          y <- getArr ys ix
-          t <- getRef sum
-          setRef sum (t + x * y)
-     return sum
-  where
-    len = max (length xs) (length ys)
+dot :: Vec Int32 -> Vec Int32 -> Prog (Exp Int32)
+dot xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-Note that the above \codei{dot} function does not mention any software specific types; \codei{dot} only makes use of two array, a reference, a for-loop, and a few logical and numerical expressions. As a result, the function's type is kept general in the sense that its parameterized on the language \codei{m} that it will eventually be instantiated in---whether \codei{m} is a software or hardware language is not yet decided. The constraint \codei{MonadComp} on \codei{m} ensure that whichever language \codei{m} ends up as will support the necessary operations, and had we picked a specific language for \codei{m} we would also have access to operations specific to that language.
-
-While the imperative implementation of the \codei{dot} function is already convenient for software realization, with the optional use as a hardware design, a pure and functional description can sometimes yield a nicer description. For this reason, our language also provide a library based on push and pull vectors~\cite{claessen2012} that facilitates a nice syntax for writing functions over vectors. For example, the dot product could be reimplemented as a function based on pull vectors:
+Text.
 
 \begin{code}
-dot :: (Vector exp, Type exp Int32) => Pull exp Int32 -> Pull exp Int32
-    -> exp Int32
-dot a b = sum (zipWith (*) a b)
+component :: Signature (Arr Int32 -> Arr Int32 -> Ref Int32 -> ())
+component = inputArray $ \xs -> inputArray $ \ys -> returnVal $ dot xs ys
 \end{code}
 
-\noindent Which is parameterized on a pure expression language \codei{exp} rather than a stateful language.
+Text.
+
+\begin{code}
+program :: Soft ()
+program = do
+  dot <- mmap "0x83C0_0000" component
+  xs  <- initArray [1,2,3,4]
+  ys  <- initArray [5,6,7,8]
+  r   <- newRef
+  call dot (xs :. ys :. r :. [])
+\end{code}
+
+Text.
+
+%\begin{code}
+%dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
+%    -> m (Ref m Int32)
+%dot xs ys =
+%  do sum <- initRef 0
+%     for 0 len $ \ix ->
+%       do x <- getArr xs ix
+%          y <- getArr ys ix
+%          t <- getRef sum
+%          setRef sum (t + x * y)
+%     return sum
+%  where
+%    len = max (length xs) (length ys)
+%\end{code}
+
+%Note that the above \codei{dot} function does not mention any software specific types; \codei{dot} only makes use of two array, a reference, a for-loop, and a few logical and numerical expressions. As a result, the function's type is kept general in the sense that its parameterized on the language \codei{m} that it will eventually be instantiated in---whether \codei{m} is a software or hardware language is not yet decided. The constraint \codei{MonadComp} on \codei{m} ensure that whichever language \codei{m} ends up as will support the necessary operations, and had we picked a specific language for \codei{m} we would also have access to operations specific to that language.
+
+%While the imperative implementation of the \codei{dot} function is already convenient for software realization, with the optional use as a hardware design, a pure and functional description can sometimes yield a nicer description. For this reason, our language also provide a library based on push and pull vectors~\cite{claessen2012} that facilitates a nice syntax for writing functions over vectors. For example, the dot product could be reimplemented as a function based on pull vectors:
+
+%\begin{code}
+%dot :: (Vector exp, Type exp Int32) => Pull exp Int32 -> Pull exp Int32
+%    -> exp Int32
+%dot a b = sum (zipWith (*) a b)
+%\end{code}
+
+%\noindent Which is parameterized on a pure expression language \codei{exp} rather than a stateful language.
 
 % like \codei{m} in the previous incarnation of \codei{dot}.
 
-The dot product and its two implementations are both combinatorial in the sense that their output only depend on the current input. Most types of vector or signal processing do, however, carry some form of state. For this reason, we also provide a signal processing library for synchronous signal processing that provides a means to promote pure values and functions to work over signals and a delay operator for access to a signal's previous value. While this set of operations may appear innocent, they allow one to any express any kind of sequential signal network. For example, we can define an edge detector that checks at each instant if the value of a signal has changed:
+%The dot product and its two implementations are both combinatorial in the sense that their output only depend on the current input. Most types of vector or signal processing do, however, carry some form of state. For this reason, we also provide a signal processing library for synchronous signal processing that provides a means to promote pure values and functions to work over signals and a delay operator for access to a signal's previous value. While this set of operations may appear innocent, they allow one to any express any kind of sequential signal network. For example, we can define an edge detector that checks at each instant if the value of a signal has changed:
 
 % by comparing its current and previous values:
 
-\begin{code}
-edge :: Signal exp Bool -> Signal exp Bool
-edge sig = zipWith (/=) sig (delay false sig)
-\end{code}
+%\begin{code}
+%edge :: Signal exp Bool -> Signal exp Bool
+%edge sig = zipWith (/=) sig (delay false sig)
+%\end{code}
 
 % \noindent Where \codei{delay} prepends the input boolean signal with a value of \codei{false}.
 

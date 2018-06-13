@@ -60,14 +60,14 @@ In an imperative setting, like that of C, the dot product's result could be comp
 dotSeq :: Arr Int32 -> Arr Int32 -> Program (Exp Int32)
 dotSeq x y = do
   sum <- initRef 0
-  for 0 n $ \ix -> do
+  for 0 (length x) $ \ix -> do
     a <- getArr x ix
     b <- getArr y ix
     modifyRef sum $ \s -> s + a * b
   getRef sum
 \end{code}
 
-While the above function is faithful to its corresponding version in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using our dedicated vector programming language instead. In fact, the same dot product can be implemented with vectors as:
+While the above function is faithful to its corresponding version in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using our dedicated vector programming language instead. In fact, the same dot product can be implemented with vectors in a single line of code:
 
 \begin{code}
 dotVec :: Vec Int32 -> Vec Int32 -> Program (Exp Int32)
@@ -87,7 +87,9 @@ dotSig = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
 
 % \noindent Signatures describes a function's type in such a way that it can be inspected from within Haskell. In the case of our dot product, the signature tells us that it takes two input vectors of length four and returns a single value.
 
-With access to the signature of a component we can, for example, connect it to an AXI4-lite interconnect, making the extended component available for memory-mapping insoftware.
+With access to the signature of a component we can, for example, connect it to an AXI4-lite interconnect, making the extended component available for memory-mapping in software. That is, the hardware component can be reached from software by reading and writing to specific bits of memory. We use the provided \codei{axi4lite} function to automatically extend a signed function with an AXI4-lite interconnect:
+
+% Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in, that is, the component can be reached by reading and writing to specific bits of memory. We use the provided \codei{axi4lite} function to automatically extend a signature with 
 
 % Having access to a description of hardware component enables us to connect it with an interconnect and put onto hardware as a physical component, which can then be memory-mapped into from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, the component can be reached by simply reading and writing to ordinary pointers into the components physical address.
 
@@ -95,7 +97,7 @@ With access to the signature of a component we can, for example, connect it to a
 axi4lite :: Signature a -> Signature (Sig Bit -> Sig Bit -> ...)
 \end{code}
 
-With the hardware component address in hand, we can write a small software program that addresses our dot product component and feeds it with two example arrays and prints its result:
+With the component synthesized and put onto hardware, we write a small software program that interacts with the component:
 
 \begin{code}
 program :: Software ()
@@ -109,92 +111,9 @@ program x y = do
   printf "sum: %d" res
 \end{code}
 
-\noindent Here, the memory mapping itself is done by the \codei{mmap} function, and returns a software pointer to the components address. The component is then called with two example arrays and returns a reference to its result, which is printed to standard output.
+\noindent Where the second argument of our memory-mapping function, \codei{mmap}, is the physical address of the component. With the component in scope, we then declare the necessary arrays and references to hold our input and output values and call the component with them. The result is then read and printed to standard output.
 
-Our example program has the look and feel of an imperative program, sans a few syntactical differences. This similarity is very much intentional, as the library, at its core, is a model of the imperative languages C and VHDL. In fact, the operations in our example can be directly translated into statements in C---\codei{mmap} and \codei{call} are specific to C. Compiling the example yields the following code:
-
-% The vector library, as shown in the implementation of the dot product, is one of our user-facing libraries that are built on ...
-
-\begin{code}
-// C code and VHDL snippet (minus the communicating bits).
-\end{code}
-
-% The kind of imperative program ..
-
-% \noindent Note that the list of arguments for the component is constructed in such a way that matches their types against the type of the component, ensuring ...
-
-%\begin{code}
-%dot :: (MonadComp m, TypeM m Int32) => Arr m Int32 -> Arr m Int32
-%    -> m (Ref m Int32)
-%dot xs ys =
-%  do sum <- initRef 0
-%     for 0 len $ \ix ->
-%       do x <- getArr xs ix
-%          y <- getArr ys ix
-%          t <- getRef sum
-%          setRef sum (t + x * y)
-%     return sum
-%  where
-%    len = max (length xs) (length ys)
-%\end{code}
-
-%Note that the above \codei{dot} function does not mention any software specific types; \codei{dot} only makes use of two array, a reference, a for-loop, and a few logical and numerical expressions. As a result, the function's type is kept general in the sense that its parameterized on the language \codei{m} that it will eventually be instantiated in---whether \codei{m} is a software or hardware language is not yet decided. The constraint \codei{MonadComp} on \codei{m} ensure that whichever language \codei{m} ends up as will support the necessary operations, and had we picked a specific language for \codei{m} we would also have access to operations specific to that language.
-
-%While the imperative implementation of the \codei{dot} function is already convenient for software realization, with the optional use as a hardware design, a pure and functional description can sometimes yield a nicer description. For this reason, our language also provide a library based on push and pull vectors~\cite{claessen2012} that facilitates a nice syntax for writing functions over vectors. For example, the dot product could be reimplemented as a function based on pull vectors:
-
-%\begin{code}
-%dot :: (Vector exp, Type exp Int32) => Pull exp Int32 -> Pull exp Int32
-%    -> exp Int32
-%dot a b = sum (zipWith (*) a b)
-%\end{code}
-
-%\noindent Which is parameterized on a pure expression language \codei{exp} rather than a stateful language.
-
-% like \codei{m} in the previous incarnation of \codei{dot}.
-
-%The dot product and its two implementations are both combinatorial in the sense that their output only depend on the current input. Most types of vector or signal processing do, however, carry some form of state. For this reason, we also provide a signal processing library for synchronous signal processing that provides a means to promote pure values and functions to work over signals and a delay operator for access to a signal's previous value. While this set of operations may appear innocent, they allow one to any express any kind of sequential signal network. For example, we can define an edge detector that checks at each instant if the value of a signal has changed:
-
-% by comparing its current and previous values:
-
-%\begin{code}
-%edge :: Signal exp Bool -> Signal exp Bool
-%edge sig = zipWith (/=) sig (delay false sig)
-%\end{code}
-
-% \noindent Where \codei{delay} prepends the input boolean signal with a value of \codei{false}.
-
-
-%\begin{code}
-%program :: Software ()
-%program =
-% do -- todo: read input arrays in a nice way.
-%    r   <- dot xs ys
-%    sum <- getRef ref
-%    printf "sum: %d" sum
-%\end{code}
-
-%\begin{code}
-%dot :: (Monad m, Arrays m, Control m, TypeM m Int32)
-%  => Arr m Int32 -> Arr m Int32 -> m (Exp m Int32)
-%\end{code}
-
-%\begin{code}
-%dotSig :: Signature (HArr Int32 -> HArr Int32 -> HRef Int32)
-%dotSig = inpArr 16 $ \xs -> inpArr 16 $ \ys -> ret $ dot xs ys
-%\end{code}
-
-%\begin{code}
-%offloaded :: Software ()
-%offloaded =
-%  do -- todo: read input arrays in a nice way.
-%     comp <- mmap "0x83C0_0000" dotSig
-%     r    <- newRef
-%     call comp (xs :> ys :> r)
-%     sum <- getRef r
-%     printf "sum: %d" sum
-%\end{code}
-
-This thesis consists of two parts. Part I is a general introduction to the field and puts the appended papers into context. Part II contains the appended papers.
+This thesis presents a work in progress co-design language that attempts to bring functional programming to the domain of embedded systems, as well as a signal processing language. The techniques presented in this thesis are however not restricted to hardware software co-design, and can be of use for developers of embedded languages in general. The thesis consists of two parts: Part I is a general introduction to the field and puts the appended papers into context; Part II contains the appended papers.
 
 % ToDo: Limit to FPGAs.
 

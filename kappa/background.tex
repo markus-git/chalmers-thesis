@@ -32,21 +32,19 @@ While modern FPGAs show great promise as a prototypical system for heterogeneous
 
 % The use of low level languages is primarily driven by the desire to access the full potential of a processor or its memory system. However, such languages also forces its developers to focus on low level implementation details rather than the high level specification of the algorithm they are implementing.
 
-% and accelerators
-
 % In the design of a heterogeneous systems there is concerns related to any dissimilarities between the embedded components that needs to be address. Components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language. Even the implementation of language features, such as functions, may differ between components. In addition to instructions, components may interpret memory in different ways and have access to various cache structures. These differences imply that a heterogeneous system may have components that are similar in architecture, but have low-level differences that lead to variations in performance and power consumption.
 
 One of the benefits of low level code is that it gives programmers fine control over the aforementioned system capabilities. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component.
 
-% and differences thereof
-
 The issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for one component to another is typically a major undertaking.
 
-Many of the issues faced in heterogeneous computing with low level languages like C and HDLs stem from a lack of abstractions. Some of these languages modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues of, for instance, functionality and architecture come as a indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately, as it allows us to create small, reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve larger problems.
+Many of the issues faced in heterogeneous computing with low-level languages stem from a lack of abstractions. Some of these languages' modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie programs to the architecture of its system. Some issues of, for instance, functionality and architecture come as a indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately, as they allow for the creation of small, reusable libraries that provide solutions to these issues, and then combined in a modular fashion to solve larger problems.
 
 % For instance, we would like to treat functionality like parallelism as a separate design decision. In imperative languages like C, this is however quite difficult to do. On the other hand, HDLs assume programs are parallel by default, and extra care has to be taken when ordering operations.
 
 % Issues with differences in language design between C and HDLs can also be ascribed to a lack of abstractions. Ideally, issues of functionality, architecture or parallelism would be treated separately. As being able to do so would allow us to create reusable libraries that provide solutions to these issues, and then combine them in a modular fashion to solve problems.
+
+In the paper ``Why functional programming matters''~\cite{hughes1989}, Hughes argues that many of the above modularity problems can be address by making use of functional programming. Particularily the glue code that functional programming languages offer, through higher-order functions and lazy evaluation, enables us to build useful combinators.
 
 \section{Functional Programming}
 \label{functional}
@@ -55,9 +53,7 @@ Functional programming, as the name implies, is based around the application of 
 
 An important distinction between functions in a functional programming language and, say an imperative language like C, is that functions always return the same value when given same arguments. More generally, we say that functional programs have no side effects; functions can safely be evaluated in parallel as long at their data dependencies are satisfied.
 
-% and that their definitions and evaluation are thus separated
-
-A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and it can be defined as follows:
+A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
 
 \begin{code}
 map :: (a -> b) -> [a] -> [b]
@@ -71,7 +67,7 @@ A function's type comes after the \codei{::} sign, and in the case of \codei{map
 
 The second and third line of \codei{map} validates our earlier guess and lists the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
 
-The usefulness of higher-order functions extend to any emedded language as well, as they can encode common patterns. For example, we could have written a function that composes a list of hardware designs in series, and then another function composes $N$ copies of the given design. 
+The usefulness of higher-order functions extend to any emedded language as well, as they can be used to encode common patterns. The co-design language makes extensive use of higher-order functions to build combinator libraries. For example, the \codei{zipWith} function used in our earlier \codei{dotVec} example from section~\ref{intro} is a higher-order function for joining two vectors with a given function.
 
 The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g <> f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
 
@@ -82,9 +78,7 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parenthesis around the dot implies that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation.
 
-Lazy evaluation in Haskell isn't limited to its own functions and values, but extends to functions written in embedded languages as well, like that of our co-design library. For these functions, the laziness of its functions means that only the parts that contribute to the end result will be part of function, that is, no unnecessary code will generated or evaluated for a program. As we will see later on, this property is especially useful for vectors as it can guarantee fusion.
-
-% The other piece of glue code in Haskell, that is, its combinators, are also usable for any embedded functions. This means that we can create programs whose operation is determined by the functions provided by its arguments. For example, we could write a hardware design in our co-design library that changes size according to the kind of inputs or operations it uses.
+Lazy evaluation in Haskell is not limited to its own functions and values, but extends to functions written in embedded languages as well. For functions in our co-design language, the laziness means that only the parts that contribute to the end result will be part of the function, that is, no unnecessary code will generated or evaluated for a program. As we will see later on, this property is especially useful for vectors as it can guarantee fusion.
 
 So far, we have looked at a few Haskell functions as an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell functions. The following section introduces the concept of domain specific languages, and explains what explains what it entails to be an embedded domain specific language in Haskell.
 

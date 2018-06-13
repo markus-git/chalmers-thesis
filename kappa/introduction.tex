@@ -42,11 +42,11 @@ Despite the aforementioned benefits of functional programming languages, they ar
 
 This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
 
-Instead of taking on the full challenge of heterogeneous programming head on, we are currently interested in a more modest approach: develop a language where one can experiment with putting components in software or hardware, embed it in Haskell, and see how far we can get in the design of a modern heterogeneous system. Having implemented such a language, we then aim to use it as a code generation target for a vector and signal processing languages. These two would serve as possible front-ends for the co-design language, raising the abstraction level of the numerical and signal processing typical of embedded systems.
+Instead of taking on the full challenge of heterogeneous programming head on, we are currently interested in a more modest approach: develop a language where one can experiment with putting components in software or hardware, embed it in Haskell, and see how far we can get in the design of a modern heterogeneous system. Having implemented such a language, we also aim to use it as a compilation target for a vector programming language and a signal processing language. These two would serve as possible front-ends for the co-design language, raising the abstraction level of the numerical and signal processing typical of embedded systems.
 
 % Modern FPGAs show a lot of promise in heterogeneous computing as they combine programmable logic, discrete components and various co-processors with a good performance per Watt ration, all on a single system. Although this diversity of components is good for performance, it does make the system harder to program: its programmable logic is often described in a hardware description language while co-processors are described in a low-level dialect of C.
 
-As an example of how programming in our co-design language feels, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors:
+As an example of our co-design language, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors:
 
 \begin{equation}
 a \cdot b = \sum_{i=1}^{n}a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + \cdots + a_{n}b_{n}
@@ -57,7 +57,7 @@ a \cdot b = \sum_{i=1}^{n}a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + \cdots + a_{n}b
 In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution can be implemented in the co-design language as well:
 
 \begin{code}
-dotSeq :: Arr Int32 -> Arr Int32 -> Prog (Exp Int32)
+dotSeq :: Arr Int32 -> Arr Int32 -> Program (Exp Int32)
 dotSeq x y = do
   sum <- initRef 0
   for 0 n $ \ix -> do
@@ -67,37 +67,46 @@ dotSeq x y = do
   getRef sum
 \end{code}
 
-While the above implementation is faithful to its corresponding version in C, its low-level has forced us to focus on implementation details rather than the mathematical specification of the dot product. 
+While the above function is faithful to its corresponding version in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using our dedicated vector programming language instead. In fact, the same dot product can be implemented with vectors as:
 
 \begin{code}
-dotVec :: Vec Int32 -> Vec Int32 -> Prog (Exp Int32)
+dotVec :: Vec Int32 -> Vec Int32 -> Program (Exp Int32)
 dotVec x y = sum (zipWith (*) x y)
 \end{code}
 
-Text.
+% \noindent Furthermore, thanks to fusion of intermediate vectors, this function will generate code as efficient as the sequential version.
+
+Note that neither version of the dot functions so far mentions any software or hardware specifics and, as such, the functions could be realized in both languages. Lets however assume that we wish to put the second function onto hardware. Before we can offload the function, we must first give it a signature that describes its inputs/output:
 
 % Note that the dot function does not mention any software or hardware specific types or functions; \codei{dot} only makes use of vectors and a few numerical expressions. As a result, the function's type is kept general in the sense that it can be realized in both hardware and software. However, lets assume for the sake of our example that we wish to put the dot product on hardware. The function itself can already be compiled to VHDL, but in order to make it accessible in software we must first give it a signature:
 
 \begin{code}
-component :: Signature (Arr Int32 -> Arr Int32 -> Exp Int32)
-component = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
+dotSig :: Signature (Arr Int32 -> Arr Int32 -> Exp Int32)
+dotSig = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
 \end{code}
 
-\noindent Signatures, like the above one, describes a function's type in such a way that it can be inspected from within Haskell. In the case of our dot product, the signature tells us that it takes two input vectors of length four and returns a single value.
+% \noindent Signatures describes a function's type in such a way that it can be inspected from within Haskell. In the case of our dot product, the signature tells us that it takes two input vectors of length four and returns a single value.
 
-Having access to a description of hardware component enables us to connect it with an interconnect and put onto hardware as a physical component, which can then be memory-mapped into from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, the component can be reached by simply reading and writing to ordinary pointers into the components physical address.
+With access to the signature of a component we can, for example, connect it to an AXI4-lite interconnect, making the extended component available for memory-mapping insoftware.
+
+% Having access to a description of hardware component enables us to connect it with an interconnect and put onto hardware as a physical component, which can then be memory-mapped into from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, the component can be reached by simply reading and writing to ordinary pointers into the components physical address.
+
+\begin{code}
+axi4lite :: Signature a -> Signature (Sig Bit -> Sig Bit -> ...)
+\end{code}
 
 With the hardware component address in hand, we can write a small software program that addresses our dot product component and feeds it with two example arrays and prints its result:
 
 \begin{code}
-program :: Soft ()
-program = do
-  dot <- mmap "0x83C0_0000" component
-  xs  <- initArray [1,2,3,4]
-  ys  <- initArray [5,6,7,8]
-  ref <- call dot (xs .: ys)
-  v   <- getRef ref
-  printf "sum: %d" v
+program :: Software ()
+program x y = do
+  dot <- mmap "0x43C0_0000" dotSig
+  x   <- initArray [1,2,3,4]
+  y   <- initArray [5,6,7,8]
+  r   <- newRef
+  call dot (xs .: ys .: r)
+  res <- getRef r
+  printf "sum: %d" res
 \end{code}
 
 \noindent Here, the memory mapping itself is done by the \codei{mmap} function, and returns a software pointer to the components address. The component is then called with two example arrays and returns a reference to its result, which is printed to standard output.

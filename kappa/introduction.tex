@@ -60,7 +60,7 @@ In an imperative setting, like that of C, the dot product's result could be comp
 dotSeq :: Arr Int32 -> Arr Int32 -> Program (Exp Int32)
 dotSeq x y = do
   sum <- initRef 0
-  for 0 (length x) $ \ix -> do
+  for 0 (min (length x) (length y)) $ \ix -> do
     a <- getArr x ix
     b <- getArr y ix
     modifyRef sum $ \s -> s + a * b
@@ -97,7 +97,7 @@ With access to the signature of a component we can, for example, connect it to a
 axi4lite :: Signature a -> Signature (Sig Bit -> Sig Bit -> ...)
 \end{code}
 
-With the component synthesized and put onto hardware, we write a small software program that interacts with the component:
+After the component has been hooked up to an AXI4-lite interconnect, synthesized and put onto hardware, we write a small software program that interacts with the component and then prints its result:
 
 \begin{code}
 program :: Software ()
@@ -111,7 +111,7 @@ program x y = do
   printf "sum: %d" res
 \end{code}
 
-\noindent Where the second argument of our memory-mapping function, \codei{mmap}, is the physical address of the component. With the component in scope, we then declare the necessary arrays and references to hold our input and output values and call the component with them. The result is then read and printed to standard output.
+\noindent Firstly, the software program brings our component into scope by calling the memory-mapping function, \codei{mmap}, with the physical address and signature of the component. Then, with the component in scope, we then declare the necessary arrays and references to hold our input and output values and finally call the component. The result is then read from the local reference and printed to standard output.
 
 This thesis presents a work in progress co-design language that attempts to bring functional programming to the domain of embedded systems, as well as a signal processing language. The techniques presented in this thesis are however not restricted to hardware software co-design, and can be of use for developers of embedded languages in general. The thesis consists of two parts: Part I is a general introduction to the field and puts the appended papers into context; Part II contains the appended papers.
 

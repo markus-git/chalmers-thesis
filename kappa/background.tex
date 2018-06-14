@@ -87,13 +87,13 @@ So far, we have looked at a few Haskell functions as an introduction to function
 
 A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and captures the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. Both use a language that is specialized to the particular task they have at hand, and both build programs in a form that is familiar to regular programmers; VHDL and JavaScript are both examples of a DSL.
 
-DSLs comes in two fundamentally different forms: external and internal. An external DSL is a first-class language, with its own compiler or interpreter, and often comes with its own ecosystem. The previous VHDL and JavaScript examples both fall into the domain of external DSLs. Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs).
+DSLs comes in two fundamentally different forms: external and internal. An external DSL is a first-class language, with its own compiler or interpreter, and often comes with its own ecosystem. The previous VHDL and JavaScript examples both fall into the domain of external DSLs. Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs). The co-design, vector and signal languages presented in this thesis are all examples of internal DSLs.
 
 % Embedded languages can have the look and feel of a stand-alone language, but reuse many parts of the host-language's ecosystem and semantics to lower the cost to develop and maintain them.
 
 Haskell, with its static type system, flexible overloading and lazy semantics, has come to host a range of EDSLs~\cite{elliott2003}. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell~\cite{leijen2002, hughes1995, bjesse1998}. These embedded languages come in two different flavors, where the most common one is called shallow embedding and is represented by functions that implements the semantics of the embedded language.
 
-We illustrate how shallow embeddings work in Haskell through a small example over integral expressions:
+We illustrate how shallow embeddings work in Haskell through a small example over simple, integral expressions:
 
 \begin{code}
 type Exp = Int
@@ -105,9 +105,7 @@ times :: Exp -> Exp -> Exp
 times a b = a * b
 \end{code}
 
-\noindent Expressions are defined as a type synonym for integers, making use of Haskell's \codei{type} keyword, and the language around our expressions is defined by two functions, one for integer literals, called \codei{const} and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're part of the domain.
-
-% Notice that, as , we could add more functions quite easily as long as they're part of the domain.
+\noindent Expressions, here called \codei{Exp}, are defined as a type synonym for integers, making use of Haskell's \codei{type} keyword. The language around our expressions is defined by two functions, one for integer literals, called \codei{const} and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're part of the domain.
 
 The advantage of a shallow type like \codei{Exp} is that we can quickly calculate its value:
 
@@ -124,7 +122,7 @@ We reimplement our earlier, shallowly embedded language for integer expressions 
 data Exp = Const Int | Times Exp Exp
 \end{code}
 
-\noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a pipe. These constructors forms what is often referred to as a syntax tree, and represents the computations behind an expression.
+\noindent Expressions contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a pipe. These constructors forms what is often referred to as a syntax tree, and represents the computations behind an expression.
 
 As the type of expressions have changed from being a synonym to a concrete type, we must also change the functions that comes with it:
 
@@ -138,7 +136,7 @@ times :: Exp -> Exp -> Exp
 times a b = Times a b
 \end{code}
 
-\noindent The functions now return a representation of the result rather than the result itself. Because of this, we can't easily add new functions as we would first have to extend \codei{Exp}.
+\noindent The functions now return a representation of the result rather than the result itself. As a consequence, we cannot add new functions without first extending the \codei{Exp} type. From a users prespective, embedded functions in Haskell are however not that different from their shallow counterparts. In fact, embedded languages can have the look and feel of a stand-alone language, but reuse many parts of the host-language's ecosystem and semantics.
 
 The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, is what enables functions to inspect, modify, and interpret an expression in order to support, for example, their evaluation:
 
@@ -152,30 +150,24 @@ eval (Times a b) = (eval a) * (eval b)
 
 % The one exception in this translation is variables, since they cannot be translated without knowing the context in which the expression is evaluated---we simply don't know what value it references. As a result, trying to evaluate an expression that contains open variables will yield an error.
 
-% which lets us inspect a them rather than simply its result.
-
 % While the representation of embedded language's syntax tree can become quite large and unwieldy as the set supported operations grows, it is necessary to have one if we would like to do any kind of transform over the representation, or if we wish to introduce another interpretation.
 
 While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide a nice syntax for their functions.
 
 % The benefits of shallow and deeply embedded are both attractive to have for an EDSL, at least in the sense that a shallow embedding can easily add new language features and a deep embedding supports multiple interpretations.
 
-Now that we have grasp of what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in our co-design and signal libraries.
+Now that we have grasp of functional programming, what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in the co-design language.
 
 \section{Embedded Programming in Haskell}
 \label{haskell}
 
 Programming in a functional language like Haskell is different from the imperative style of programming where users express their program as a series of sequential steps. In Haskell, users write their program as a mathematical function, that is, a function from its inputs to its output. This is in contrast to the imperative style of programming, 
 
-% done in C or the hardware descriptions written in VHDL
-
 % Furthermore, functional programming is typically done compositionally, and its languages provide a rich of operators to support the composition of new functions from smaller ones.
 
 As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. The mathematical definition of a FIR filter of rank $N$ is as follows:
 
-% A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero.
-
-% This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have an infinite impulse response. 
+% A FIR filter is a filter whose impulse response has a finite duration, since it eventually settles to zero. This is in contrast to infinite impulse response filters, the second filter of the two primary types of digital filters, which may have an infinite impulse response. 
 
 \vspace{-2mm}
 \begin{equation}
@@ -205,7 +197,7 @@ void fir(int N, int L, double *b, double *x, double *y)
 
 \noindent Here, $N$ is the filter rank, as before, and $L$ is the size of the input---we assume $N$ will be smaller than $256$. The three variables $b$, $x$, and $y$ point towards arrays containing the coefficient, input, and output, respectively. As for the functions body, the first for-loop initializes the taps while the second for-loop goes through all of the inputs and shifts them onto the taps and computes their impulse response.
 
-Looking at the C code, it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner does mean it is specialized to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
+Looking at the C code, at first glance it seems to be a good representation of the FIR filter. There are however a few problems with the implementation. For instance, the second of the two inner for-loops that calculates the intermediate result $v$ does so by performing a dot-product of the arrays $b$ and $tap$. Implementing a dot-product in this manner will tie it to our FIR filter, as opposed to a stand-alone function which can be used by many. While it is possible to extract the computation like so:
 
 \begin{code}
 double dot(int N, double *xs, double *ys)
@@ -218,102 +210,72 @@ double dot(int N, double *xs, double *ys)
 
 \noindent The function is still specialized to values of type $double$, it assumes $b$ and $tap$ both have at least $N$ elements, and it is not readily compositional since the function cannot be merged with the producers of \codei{xs} or \codei{ys} without looking at its implementation.
 
-In Haskell, functions like the dot-product can be implemented in a compositional style by using two operations from its standard libraries, namely \codei{zipWith} and \codei{sum}:
+A dot product can be imlemented in our embedded co-design language, as shown in section~\ref{intro}, using a similar imperative, but not idiomatic, style:
 
 \begin{code}
-dot :: Num a => [a] -> [a] -> a
-dot xs ys = sum (zipWith (*) xs ys)
+dotSeq :: Arr Float -> Arr Float -> Program (Exp Float)
+dotSeq x y = do
+  sum <- initRef 0
+  for 0 (min (length x) (length y) $ \ix -> do
+    a <- getArr x ix
+    b <- getArr y ix
+    modifyRef sum $ \s -> s + a * b
+  getRef sum
 \end{code}
 
-\noindent \codei{zipWith} is a general function for merging lists and is used here to combine the input lists \codei{xs} and \codei{ys} by element wise multiplication. The resulting list is summed together with the help of \codei{sum}, which produces the final result of the dot-product. In contrast to the C function which only accepts values of type \codei{double}, \codei{dot} is able to take any numerical value thanks to its \codei{Num} constraint on \codei{a}. Furthermore, Haskell's lazy evaluation ensures that \codei{dot} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+\noindent It does so by making use of the fact that a \codei{Program} is a monad. That is, programs acts as a kind of composable computation descriptions, and together with Haskell's \codei{do} notation, allows us sequence instructions very much like we would do in C.
 
-% \codei{zipWith} is a general, list-based function and can used with other operators than simply multiplication
-
-% We also define two additional helper functions, namely the \codei{shift} and \codei{step} functions:
-
-%\begin{code}
-%push :: a -> [a] -> [a]
-%push x taps = x : init taps
-%
-%step :: [a] -> [a] -> a -> ([a], a)
-%step b taps x = (new, dot b new)
-%  where new = push x taps
-%\end{code}
-
-%\noindent \codei{shift} is designed to manage the filter's taps, as it pushes a new value onto them while at the same time dropping their oldest value. \codei{step} shifts the current input onto the taps and then calculates the output for that time instant, returning a pair of the taps and impulse response.
-
-%We can now implement the FIR filter:
-
-%\begin{code}
-%fir :: Num a => [a] -> [a] -> [a]
-%fir b xs = snd (mapAccumR (step b) taps xs)
-%  where
-%    taps = replicate (length b) 0
-%\end{code}
-
-%The filter uses a special mapping function, called \codei{mapAccumR}, which is similar to the earlier \codei{map} function show in section~\ref{functional}, but also carries around an extra value throughout its applications of \codei{step} to the inputs \codei{xs}. For the filter, this extra value is used to hold the filter's taps. The taps are initially a list of zeroes created by Haskell's \codei{replicate} function, and each application of \codei{step} pushes an new input onto the taps. The result of the filter is obtained using \codei{snd}, which throws away the taps and returns only the accumulated outputs.
-
-Implementing the dot product as an embedded function in our co-design library is not that different from its implementation in standard Haskell. In fact, we can reimplement the dot product without having to change its definition very much at all:
+This version of a dot product is however not without fault. As with the C version, the function is locked to values of \codei{Float}. We could however tackle this problem by making use of Haskell's \codei{Num} class, changing the function's type while leaving its body intact:
 
 \begin{code}
-dot :: (Num a, Type a) => Vec (Exp a) -> Vec (Exp a) -> Exp a
-dot xs ys = sum (zipWith (*) xs ys)
+dotSeq :: Num a => Arr a -> Arr a -> Program (Exp a)
 \end{code}
 
-\noindent Its type has grown a bit, and it is perhaps the clearest indicator of how things have changed. Gone are the regular Haskell lists and values, and in their place we have the vector and expression types \codei{Vec} and \codei{Exp}, respectively. These types provide functions that mimic common operations in Haskell. For example, a vector can be thought of as description of a list of finite size, while expressions can be thought of as a pure computation that models a regular Haskell value---like the deeply embedded expressions from section~\ref{domain}.
+\noindent Where the function is now polymorphic in the kind of values it accepts, but also limited to numerical values that supports addition and multiplication. Even with its new type, the function is quite still fragile: the for-loop's length and the array indexing are both handled manually. That is, a single typo in any of these two would break the function but not its type, and any error would first emerge at run-time.
 
-% These types are part of our co-design library
-
-%The latter analogy is especially appropritate, as it is in fact possible to evaluate expressions into their equivalent value in Haskell:
-
-%\begin{code}
-%evaluateExp :: Type a => Exp a -> a
-%\end{code}
-
-%\noindent That is, as long as its an expression over some known type \codei{a} which supports evaluation. This extra type constraint is enforced by the \codei{Type} class and ensures \codei{a} is known type---such as a boolean or a numeric type.
-
-The vector type and its functions are part of the user-facing libraries of the co-design library, and provides a nice syntax for writing array based functions. At its core however, the co-design library is built on a representation imperative programs to model the kind of programs written in C and VHDL. For this reason, the co-design library also provide types for references, arrays, and other common types found in both C and VHDL.
-
-Implementing the full FIR filter in an imperative style with our co-design library is done by using on of its program types. With the help of Haskell's do-syntax, which functions to be written as a series of steps to take, the filter can be implemented using a program type like so:
+For purely array based computations like the dot product, the idiomatic approach is however to use our vector language and build larger functions from its library of smaller, verified functions. A vector based dot product can be defined succinctly as follows:
 
 \begin{code}
-fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Prog (Arr a)
-fir N b xs = do
-  taps <- initArr (replicate N 0)
-  ys   <- newArr  (length xs)
-  for 0 L $ \ix -> do
-    for 1 (lit N) $ \jx -> do
-      tmp <- getArr taps (jx - 1)
-      setArr taps jx tmp
-    x <- getArr xs ix
-    setArr taps 0 x
-    setArr ys ix (dot b taps)
-  return ys
+dotVec :: Num a => Vec a -> Vec a -> Exp a
+dotVec xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Notice that $N$, the filters rank, is a pure Haskell value as opposed to an expression. As regular Haskell values are evaluated before a program is compiled, the filter function is actually a kind of generator that produces a specialized filter for each value of $N$. The filter's array operations is supported by the \codei{Arr} type, which provides the \codei{initArr}, \codei{getArr}, and \codei{setArr} functions for managing the creation, indexing, and writing to arrays.
+\noindent Here, the dot product is calculated by first joining the two vectors \codei{xs} and \codei{ys} by element-wise multiplication with \codei{zipWith}, and then reducing the resulting list with \codei{sum}.
 
-\todo{Compile to C code and comment on the generated code.}
+The above version of the dot product is not only closer to its mathematical specification than the sequential one, but also sturdier in the sense that its harder for users to make an error. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+
+For a full implementation of the FIR filter, the vector language is however found to be lacking in expressiveness: the library excel at describing array transformations, whereas the filter is described by a recurrence equation where output depends on previous input values. Nevertheless, the vector library does provide a few such recurrence functions, and we use one of them to implement the full filter:
 
 \begin{code}
-// C code.
+fir :: Num a => Vec a -> Vec a -> Arr a
+fir cs inp = recurrenceI (replicate (length bs) 0) inp $ \i -> dotVec cs i
 \end{code}
 
-%Text.
+\noindent Where \codei{recurrenceI} takes an initial buffer, an input vector to iterate over, and a step function that produces one output at a time from the previous inputs and buffer.
 
-%\begin{code}
-%fir :: (Num a, Type a) => Int -> Arr a -> Arr a -> Design (Arr a)
-%fir N b xs = do
-%  taps <- initArr (replicate N 0)
-%  ys   <- initArr (replicate (length xs) 0)
-%  for 1 (lit N) $ \jx -> do
-%    tmp <- getArr taps (jx - 1)
-%    setArr taps jx tmp
-%  x <- getArr xs ix
-%  setArr taps 0 x
-%  setArr ys ix (dot b taps)
-%  return ys
-%\end{code}
+Recurrence functions like \codei{recurrenceI} can handle regular feedback of the FIR filter quite well, but struggles for when the output needs irregular access to earlier inputs. FIR filters are however typically used in digital signal processing applications, and while the filter can be described using vectors, the idiomatic approach for such functions is to instead use our signal processing language. 
+
+The signal processing language is built upon the co-design language and is based on the concept of signals: possibly infinite sequences of values. Like the vector language, idiomatic signal functions are constructed compositionally using smaller functions from its library, but signals also provide an function for introducing unit delays. As an example, we create three signal functions that represents the main components of a FIR filter:
+
+\begin{code}
+sums :: Num a => [Sig a] -> Sig a
+sums as = foldr1 (+) as
+
+muls :: Num a => [Exp a] -> [Sig a] -> [Sig a]
+muls as bs = zipWith (*) (map constant as) bs
+
+dels :: Exp a -> Sig a -> [Sig a]
+dels e as = iterate (delay e) as
+\end{code}
+
+\noindent That is, a summation and a multiplication with coefficients, forming a dot product together, and a number of successive delays to form the ``taps''. Note that addition and multiplication are lifted to operate element-wise over signals, and \codei{constant} and \codei{delay} are signal functions that introduces a constant signal and a unit delay, respectively. The list operations \codei{foldr1}, \codei{zipWith}, \codei{map}, and \codei{iterate} are all part of Haskell's standard functions.
+
+A full FIR filter can now be expressed as:
+
+\begin{code}
+fir :: (Num a, Type a) => [Exp a] -> Sig a -> Sig a
+fir coeffs = sums . muls coeffs . dels 0
+\end{code}
 
 %\subsubsection{Interpretations}
 

@@ -20,20 +20,18 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{haskell} we talked about generating C code from our embedded Haskell programs. For the kind of heterogeneous computing that our co-design library aims to describe its not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code and even components described by the same language can differ by what intrinsic operations they support.
+In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of a FIR filter, one with vectors and one with signals, and showed their compiled C code. For the kind of heterogeneous computing that our co-design library aims to describe it is however not enough to only generate C code; heterogeneous system typically see hardware code interleaved with software code, even components described by the same language can differ by what intrinsic operations they support.
 
-% So, starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
+% C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with.
 
-% Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of various intrinsic operations to account for differences between components.
+Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of new operations to account for differences between components.
 
-\section{Particular Programs}
+\section{Hardware Software Partitioning}
 \label{program}
 
-While C and VHDL are designed with different tasks in mind, both languages are imperative in nature. Because of this, our co-design library is built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
+While the C and VHDL languages different in that one describes software code and the other hardware designs, both languages exhibit an imperative style of programming. As a consequence, our co-design language is built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
 
-The general idea behind our monadic backend is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
-
-% C is perhaps the most commonly used language for writing software in embedded systems and is as such used by the co-design library as well. For hardware descriptions we use the VHDL language, purely based on the fact it is the hardware description language we are most comfortable with. 
+The general idea behind a monadic embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language.
 
 As an example of the similarities between monads and imperative programs, consider a software program for reversing an array:
 
@@ -49,46 +47,40 @@ reverseS arr =
     len = length arr
 \end{code}
 
-\noindent Its type tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type of the software program is empty as the array is reversed in place.
+\noindent Its type signature tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type is empty as the array is reversed in place.
 
-The implementation of \codei{reverseS} has the look and feel of a imperative program, sans a few syntactical differences, as it iterating over the input array with a for loop and swaps values from the left side with their opposite position on the right. As a result, the translation of \codei{reverseS} to, for example, C code is straightforward: we simply translate each statement to their corresponding statement in C. % We can even translate each statement individually, as monads take care of the program structure.
+% The implementation of \codei{reverseS} certainly has the look and feel of a imperative program, sans a few syntactical differences. As a result, the translation of \codei{reverseS} to C code is straightforward: we simply translate each statement to their corresponding statement in C. We can even translate each statement individually since monads take care of the program structure.
 
 % \codei{reverseS} makes use of two array operations for reading and writing to an array, \codei{getArr} and \codei{setArr}, which behave as you would expect them to: \codei{getArr} takes an array and an index, and returns the array's value at that index; \codei{setArr} takes an array, an index and a value, and stores the value in the array.
 
 % For each of these indices, \codei{ix}, it reads two values from the array at the leftmost and rightmost places, offset by the index. Having read and stored these two values into the \codei{aix} and \codei{ajx} variables, they are then put back into the array at the opposite place. This process of flipping pairs of values will eventually result in a reversed array when the two indexed values meet in the middle. 
 
-% , as it loops over the first half of the array's indices
-
-While the type of \codei{reverseS} is that of a software function, there's nothing software specific about it. For-loops and arrays are both part of most imperative languages, including VHDL. We could therefore have implemented the reverse function in hardware as well. In fact, we can define a hardware version of the reverse function simply by changing its type, keeping its body intact:
+While the type of \codei{reverseS} is that of a software function, there's nothing software specific about it. For-loops and arrays are both part of most imperative languages, and we could just as well have implemented the same reverse function in hardware. In fact, we can define the hardware version by simply changing the previous function's type signature while keeping its body intact:
 
 \begin{code}
 reverseH :: HArr Int32 -> Hardware ()
-reverseH arr = undefined -- same as before.
+reverseH arr =
+  for 0 (len `div` 2) $ \ix -> do
+    aix <- getArr arr ix
+    ajx <- getArr arr (len - ix - 1)
+    setArr arr ix ajx
+    setArr arr (len - ix - 1) aix
+  where
+    len = length arr
 \end{code}
 
-The fact that we were able to define both the \codei{reverseS} and \codei{reverseH} functions by using the same implementation body hints that having them marked as software and hardware specific programs was unnecessary; we would have be better off keeping the function generic and thus reusable with both languages.
+The fact that we are able to define both the \codei{reverseS} and \codei{reverseH} using the same function body hints that having them marked as software and hardware programs was unnecessarily restrictive. After all, the function only requires its language to support for-loops, arrays, and a few numerical operations.
 
-% After all, the function only requires that its implementer support the for-loop and array operations it uses.
-
-Generic functions that can be interpreted as both software and hardware are supported by the co-design library through its use of type classes: classes lets us put additional constraints on a function that says which operations is required by the language that wants to use it. For instance, the reverse function could be given the following type:
-
-% , generic type:
-
-% Classes which enables us to put additional constraints on what classes of operations are necessary in order to implement a function and thus which languages is can be instantiate in. For the reverse function, we could give it the following type:
+Functions which are not limited to either hardware or software are supported by the co-design language through its hierarchy of type classes. That is, as we used Haskell's \codei{Num} class in section~\ref{embedded} to accept any numerical value in our dot-product, we can also use type classes to accept any language which support the classes' functions. As for the reverse function, which makes use of a for-loop and array operations, we can give it the following type signature:
 
 \begin{code}
 reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
         => Arr m Int32 -> m ()
-reverse arr = undefined -- same as before.
 \end{code}
 
-\noindent The previous array types of \codei{SArr} and \codei{HArr} are substituted for the more general array type of \codei{Arr}, which is parameterized on the monad \codei{m}. The general idea is that \codei{Arr} will turn into a \codei{SArr} or \codei{HArr} type when \codei{m} is instantiated with their respective monads.
+\noindent In order to make the function language agnostic, the previous array types of \codei{SArr} and \codei{HArr} have been substituted for the generic array type \codei{Arr}, which is parameterized on the monad \codei{m} rather than associated with a specific language. The general idea behind \codei{Arr} is that it will turn into \codei{SArr} or \codei{HArr} when instantiated with their respective monads.
 
-% Having the extra \codei{m} parameter on \codei{Arr} lets the type be used with any monad that supports arrays.
-
-The new, and now generic, function for reversing an array has introduced two new types from our co-design library, namely the \codei{Arrays} and \codei{Control} constraints. These two classes ensure the for-loop and array operations used by the reverse function will be supported and are, at least in part, given by the following interface:
-
-% These two classes ensure that whichever monad the function gets eventually gets instantiated as will support the necessary array and control operations:
+Three new constraints have been introduced, namely the \codei{Arrays}, \codei{Control}, and \codei{TypeM} type classes. Where the first two ensure \codei{m} supports arrays and for-loops, whereas the third one states that a 32-bit integer is a valid type in \codei{m}. The two type classes for \codei{Arrays} and \codei{Control} are defined as follows:
 
 \begin{code}
 class Monad m => Arrays m where
@@ -102,73 +94,95 @@ class Monad m => Control m where
       -> m ()
 \end{code}
 
-\noindent These list the operations associated with each class and, in the case of arrays, the array type used with them. Also, notice the new type \codei{Exp} and constraint \codei{TypeM}, representing the expression and type constraint associated with the monad \codei{m}: \codei{TypeM} ensures a type is representable within \codei{m}, and \codei{Exp} references the expression type used with \codei{m}.
+\noindent Where each class lists their associated functions and in the case of arrays, the type to use with them. \codei{Exp} represents the expression type associated with \codei{m}. As functions like these are quite common in imperative programs, we provide a short-hand for type classes with common computational functions called \codei{MonadComp}:
+
+\begin{code}
+type MonadComp m = (Monad m, References m, Arrays m, Control m)
+\end{code}
 
 % The \codei{TypeM} and \codei{Exp} types introduced here are quite similar to the earlier \codei{Type} and \codei{Exp} types from section~\ref{haskell}. In fact, the latter two types are defined in terms of the general ones but applied to the softare monad, as we used them with examples that were compiled to C code.
 
-While the software and hardware monads both support the above array and control operations, we can also point out groups of operations which are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software---thus forming a hierarchy of classes. Monads still form the base of the hierarchy, but operations intended for either software or hardware branches also require that their monad is an extension of their respective monads.
-
-As an example of language specific functions, we will revisit the FIR filter from section~\ref{haskell}. Reimplementing the filter as a generic program with is straightforward: the types used in the old filter were simply type synonyms for software types, so we only need to update the function's type to make use of generic arrays and monads instead:
+While the software and hardware monads both support the above array and control operations, the co-design library also provides classes of operations that are only supported by software but not hardware, and vice versa---like processes in hardware or IO in software:
 
 \begin{code}
-fir :: (Num a, TypeM m a, Arrays m, Control m) => Int -> Arr m a -> Arr m a
-    -> m (Arr m a)
-fir N b xs = do
-  taps <- initArr (replicate N 0)
-  ys   <- newArr  (length xs)
-  for 0 L $ \ix -> do
-    for 1 (lit N) $ \jx -> do
+class HardwareMonad m => Process m where
+  process :: [Name] -> m () -> m ()
+\end{code}
+
+\noindent Monads still form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads.
+
+At this point we should note that types introduces in this section are slightly different from those found in section~\ref{embedded}. For instance, the array type now has an extra parameter \codei{m}. These differences are the result of our wish to simplify the function types in the earlier section and, in the case of arrays, can be unified by using either \codei{SArr} or \codei{HArr}.
+
+With the new types and classes, we revisit the dot product from section~\ref{embedded} and reimplement it as a generic function:
+
+\begin{code}
+dotSeq :: (MonadComp m, TypeM m a, Num a) =>
+  Arr m a -> Arr m a -> Program (Exp m a)
+dotSeq x y = do
+  sum <- initRef 0
+  for 0 (min (length x) (length y) $ \ix -> do
+    a <- getArr x ix
+    b <- getArr y ix
+    modifyRef sum $ \s -> s + a * b
+  getRef sum
+\end{code}
+
+\noindent Aside from its type signature, which now includes the constraints \codei{MonadComp} and \codei{TypeM}, the function is the same as its previous incarnation.
+
+As an example of a larger function, we also implement the full FIR filter:
+
+\begin{code}
+firSeq :: (MonadComp m, TypeM m a, Num a) =>
+  Arr m a -> Arr m a -> m (Arr m a)
+firSeq bs xs = do
+  taps <- newArr (length bs)
+  ys   <- newArr (length xs)
+  for 0 (length bs) $ \ix -> do
+    setArr taps ix 0
+  for 0 (length xs) $ \ix -> do
+    for 1 (length bs) $ \jx -> do
       tmp <- getArr taps (jx - 1)
       setArr taps jx tmp
     x <- getArr xs ix
     setArr taps 0 x
-    setArr ys ix (dot b taps)
+    o <- dotSeq bs taps
+    setArr ys ix o
   return ys
 \end{code}
 
-Connecting the FIR filter to a simple main program that supplies an example arrays for its coefficients and input lets us instantiate the code in, for example, the software monad and compile it to C:
+\noindent The filter itself is fairly straightforward: inputs are shifted onto an array holding the filter's ``taps'' and with each shift one output is calculated by the dot product of the current coefficients and ``taps''.
 
-\begin{code}
-// C code.
-\end{code}
+While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter. In the case of our FIR filter, the change to hardware is however quite simple: we swap the input and output arrays for signals and change the outer for-loop into a process. Optimizations at this scale is something we claim ..., as long as layout experimentation ...
 
-While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter. Signals and processes are hardware specific types, so in order to use them, we first change the type of the filter so that its a hardware specific function:
 
-\begin{code}
-firH :: (Num a, HType a) => Int -> HArr a -> Signal a
-     -> Hardware (Signal a)
-\end{code}
+% Connecting the FIR filter to a simple main program that supplies an example arrays for its coefficients and input lets us instantiate the code in, for example, the software monad and compile it to C:
 
 % \noindent Note that, in order to make the filter implementation a bit shorter, we given the output signal as an argument to the filter.
 
-Making the change from generic arrays to signals means that we also have to update the function's body in order to reflect its new types. For signals, the difference is that values are now processed one by one instead of chunks, that is, rather that iterating over an input array we will have to process an input signal and react to its changes in value with a process:
+% Making the change from generic arrays to signals means that we also have to update the function's body in order to reflect its new types. For signals, the difference is that values are now processed one by one instead of chunks, that is, rather that iterating over an input array we will have to process an input signal and react to its changes in value with a process:
 
-\begin{code}
-firH N b xs ys = do
-  taps <- initArr (replicate N 0)
-  ys   <- initSignal 0
-  process (xs .: []) $ do
-    for 1 (lit N) $ \jx -> do
-      tmp <- getArr taps (jx - 1)
-      setArr taps jx tmp
-    x <- getSignal xs
-    setArr taps 0 x
-    setSignal ys (dot b taps)
-  return ys
-\end{code}
+% \begin{code}
+% firH N b xs ys = do
+%   taps <- initArr (replicate N 0)
+%   ys   <- initSignal 0
+%   process (xs .: []) $ do
+%     for 1 (lit N) $ \jx -> do
+%       tmp <- getArr taps (jx - 1)
+%       setArr taps jx tmp
+%     x <- getSignal xs
+%     setArr taps 0 x
+%     setSignal ys (dot b taps)
+%   return ys
+% \end{code}
 
-\noindent Note that, the arrays used for taps and coefficients are held by signals.
+% \noindent Note that, the arrays used for taps and coefficients are held by signals.
 
-Connecting the hardware filter to a main program body that supplies it with its inputs and compiling it produces the following VHDL design:
-
-\begin{code}
-// VHDL code.
-\end{code}
+% Connecting the hardware filter to a main program body that supplies it with its inputs and compiling it produces the following VHDL design:
 
 \section{Embedded Expressions}
 \label{expr}
 
-A language embedding based on monads gives users a representation of statements in an imperative program to work with, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our library interprets and computes to produce a new value. As an example, consider a function for squaring a software value:
+A language embedding based on monads gives users a representation of the statements in an imperative program, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our co-design library interprets and computes to produce a new value. As an example, consider a function for squaring a software value:
 
 \begin{code}
 squareS :: SExp Int32 -> SExp Int32
@@ -186,18 +200,18 @@ squareH :: HExp Int32 -> HExp Int32
 squareH a = a * a
 \end{stub}
 
-Looking at the implementation for our hardware and software squaring functions we see that they're identical; both software and hardware support a multiplication operator for their expressions. The expression type only need to support multiplication which, in Haskell, comes from its \codei{Num} class of numerical operations.
+Looking at the two functions we see that they're identical, since both make use the multiplication operator for Haskell's \codei{Num} class. We can thus define a generic version:
 
-% There is no software or hardware specific characteristics in either squaring function,
+% As both software and hardware expressions support \codei{Num}, we can define a generic function as well:
 
 \begin{code}
 square :: (Num (exp a), Type exp a) => exp a -> exp a
 square a = a * a
 \end{code}
 
-\noindent Note that the type constraint is slightly different from previous functions, as \codei{Type} is used instead of \codei{TypeM}; the former type constraint is designed for use expressions while the latter is used with monads.
+\noindent Note that the type constraint on \codei{a} is slightly different that before as we use \codei{Type} instead of \codei{TypeM}: the former is designed to be used with expressions rather than monads.
 
-In simple expressions, the resulting value is usually one of various primitive types supported by the co-design library, such as signed and unsigned numerical, floating point, and logical; in more elaborate expressions, it can be a complex data type. For example, it is possible to make an expression over a pair of values, and we can define functions over these pairs as well:
+In simple expressions, like the above squaring function, the resulting value is usually one of various primitive types such as signed and unsigned numerical, floating point, and logical. However, in more elaborate expressions it can be a complex data type. For example, we can define an expression over a pair of values, and we can define functions over these pairs as well:
 
 \begin{code}
 dist :: (SExp Float, SExp Float) -> (SExp Float, SExp Float) -> SExp Float
@@ -207,7 +221,9 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. In order to compile \codei{dist}, we need to get its input from somewhere and do something with its output. A convenient way to do this in software is to use its \codei{fget} function to read standard input, \codei{stdin}, and then use \codei{printf} to write the output out into standard output.
+\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates.
+
+Before we can compile a function like \codei{dist}, we need to get its input from somewhere and then do something with its output---remember that lazy evaluation will remove unused functions before compilation. A convenient way to read input in software is to use the \codei{fget} function, while \codei{printf} can be used to write the output:
 
 \begin{code}
 distProg :: Software ()
@@ -220,18 +236,44 @@ distProg = do
 Compiling \codei{distProg} produces the following code:
 
 \begin{code}
-// C code.
+Generated C code goes here.
 \end{code}
 
 \noindent Note that there are no pairs in the generated C code, as the different coordinates simply become four separate references to the two input variables.
 
 \section{Communicating Components}
 
-The ability to write software, hardware and generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
+The ability to write generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
 % Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no real need for such advanced features---although burst writing of arrays is desirable they are usually small enough to not impact performance. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
 
 Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Both signals and processes are supported by our co-design library, and the whole AXI4-lite interface can in fact be implemented within the library---while the full AXI4 interface could certainly be implemented as well, we have yet to do so.
+
+\begin{code}
+axi4light ::
+  => Signature a
+  -> Signature (
+          Sig (Bits 32) -- ^ Write address.
+       -> Sig (Bits 3)  -- ^ Write channel protection type.
+       -> Sig Bit       -- ^ Write address valid.
+       -> Sig Bit       -- ^ Write address ready.
+       -> Sig (Bits 32) -- ^ Write data.
+       -> Sig (Bits 4)  -- ^ Write strobes.
+       -> Sig Bit       -- ^ Write valid.
+       -> Sig Bit       -- ^ Write ready.
+       -> Sig (Bits 2)  -- ^ Write response.
+       -> Sig Bit       -- ^ Write response valid.
+       -> Sig Bit       -- ^ Response ready.
+       -> Sig (Bits 32) -- ^ Read address.
+       -> Sig (Bits 3)  -- ^ Protection type.
+       -> Sig Bit       -- ^ Read address valid.
+       -> Sig Bit       -- ^ Read address ready.
+       -> Sig (Bits 32) -- ^ Read data.
+       -> Sig (Bits 2)  -- ^ Read response.
+       -> Sig Bit       -- ^ Read valid.
+       -> Sig Bit       -- ^ Read ready.    
+       -> ())
+\end{code}
 
 % A function called \codei{axi_ligth} takes a hardware program and hooks it up to an AXI4-lite interconnect, and the wrapped hardware component can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical design that can be put onto the FPGA.
 

@@ -390,4 +390,34 @@ call :: Pointer a -> Argument a -> Software ()
 
 \noindent Which goes through the argument list and writes each value that's marked as an input, while those marked as outputs store the result read from the component.
 
+As an example of offloading a function to hardware, we will revisit the dot product from section~\ref{embedded} and offload that. Recall that our sequential version of the dot product had the following type signature:
+
+\begin{code}
+dotSeq :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
+  -> Program (Exp m a)
+\end{code}
+
+Text.
+
+\begin{code}
+dotSig :: Signature (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
+dotSig = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dotSeq a b
+\end{code}
+
+Text.
+
+\begin{code}
+program :: Software ()
+program = do
+  dot <- mmap "0x4C300000" dotSig
+  arr <- initArr [1 .. 3]
+  brr <- initArr [3 .. 6]
+  res <- newRef
+  call dot (arr :>> brr :>> res :> nil)
+  val <- getRef res
+  printf "%d\n" val
+\end{code}
+
+Text.
+
 \end{document}

@@ -26,7 +26,7 @@ In section~\ref{embedded} we introduced a simplified version of our co-design, v
 
 Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components. Furthermore, the software and hardware programs are both extensible in the sense that they support the addition of new operations to account for differences between components.
 
-\section{Hardware Software Partitioning}
+\section{Hardware Software Programs}
 \label{program}
 
 While the C and VHDL languages different in that one describes software code and the other hardware designs, both languages exhibit an imperative style of programming. As a consequence, our co-design language is built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
@@ -150,10 +150,11 @@ firSeq bs xs = do
   return ys
 \end{code}
 
-\noindent The filter itself is fairly straightforward: inputs are shifted onto an array holding the filter's ``taps'' and with each shift one output is calculated by the dot product of the current coefficients and ``taps''.
+\noindent The filter itself is fairly straightforward: inputs are shifted onto an array holding the filter's taps and with each shift one output is calculated by the dot product of the current coefficients and taps. The taps themselves are stored in an array, which is initialized with zeroes.
 
-While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter. In the case of our FIR filter, the change to hardware is however quite simple: we swap the input and output arrays for signals and change the outer for-loop into a process. Optimizations at this scale is something we claim ..., as long as layout experimentation ...
+While the above filter is suitable for a software implementation, it is perhaps not ideal as a hardware design: signal processing in C is often done with arrays over chunks of the input, while a hardware design makes use of signals and processes to drive a continuous filter. In the case of our FIR filter, the change to hardware is however quite small: we simply swap the input and output arrays for signals and change the outer for-loop into a process. Rewriting programs at this scale is a kind of optimization wich we think developers are comfortable with. 
 
+% and as long as layout experimentation, 
 
 % Connecting the FIR filter to a simple main program that supplies an example arrays for its coefficients and input lets us instantiate the code in, for example, the software monad and compile it to C:
 
@@ -179,37 +180,93 @@ While the above filter is suitable for a software implementation, it is perhaps 
 
 % Connecting the hardware filter to a main program body that supplies it with its inputs and compiling it produces the following VHDL design:
 
-\section{Embedded Expressions}
-\label{expr}
+\section{Instructions}
+\label{instr}
 
-A language embedding based on monads gives users a representation of the statements in an imperative program, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our co-design library interprets and computes to produce a new value. As an example, consider a function for squaring a software value:
+The co-design language is inspired by the work of~\cite{BjornBenny} and by the Operational Monad~\cite{Operational} and is as such based on a monadic representation of imperative programs. Like our inspiration, these programs capture a monadic computation as an algebraic data type. However, unlike our inspiration, we also take into account the fact that languages support different instructions, types and expressions. The program type is therefore parameterized on its instruction type and a type-level list of types associated with the language:
 
 \begin{code}
-squareS :: SExp Int32 -> SExp Int32
-squareS a = a * a
+data Program instr fs a
 \end{code}
 
-% \noindent Applying the squaring function to a value of $5$ is equaivalent to the mathematical expression $5*5$ which evaluates to $25$. Expressions are however a deeply embedded type, as mentioned in section~\ref{haskell}, and evaluation therefore is not the only interpretation that they support. For instance, this squaring expressions could just as well be compiled to C code when used inside a software program.
+\noindent As programs are a deep embedding of monads they instantiate Haskell's monad class:
 
-Just as the software programs from section~\ref{program} have a corresponding type used for hardware programs, \codei{SExp} have a corresponding hardware type for expressions called \codei{HExp}:
+\begin{code}
+instance Monad m => Functor     (Program instr fs)
+instance Monad m => Applicative (Program instr fs)
+instance Monad m => Monad       (Program instr fs)
+\end{code}
 
-% The squaring function can be implemented using hardware expressions by simply changing its type:
+The general idea behind our program type is that it allows for instructions to be separated from their sequencing, since an instruction's effect will only depend on its interaction with other instructions. That is, Haskell's monadic syntax ensures that any instructions we use in our programs are sequenced correctly. As a consequence of this separation, the task of implementing a language based on \codei{ProgramT} is the same as writing an interpreter for the language's instructions. In particular, we can define a generic interpreter for programs that maps them to their intended meaning:
 
-\begin{stub}
-squareH :: HExp Int32 -> HExp Int32
-squareH a = a * a
-\end{stub}
+\begin{code}
+interpret :: (Interp i m fs, HFunctor i, Monad m) => Program i fs a -> m a
+\end{code}
 
-Looking at the two functions we see that they're identical, since both make use the multiplication operator for Haskell's \codei{Num} class. We can thus define a generic version:
+\codei{interpret} lifts a monadic interpretation of instructions, which may be of varying types, to a monadic interpretation of the whole program. By using different types for the monad \codei{m}, one can implement different ``back ends'' for programs. For example, interpretation in Haskell's \codei{IO} monad gives a way to \emph{run programs}, while interpretation in a code generation monad can be used to make a \emph{compiler}. The interpretation of an instruction set \codei{i} to the monad \codei{m} is given by \codei{Interp}:
 
-% As both software and hardware expressions support \codei{Num}, we can define a generic function as well:
+\begin{code}
+class Interp instr m fs where
+  interp :: instr '(m,fs) a -> m a
+\end{code}
+
+Note that \codei{interpret} also require that its instructions are higher-order functors, parameterized on the program monad that they are part of---the instructions here are actually given a list of parameters, but the interpreter is only interested in its first member. There is however nothing stopping us from having instructions with more parameters. The \codei{HFunctor} class of higher-order functors is defined as follows:
+
+\begin{code}
+class HFunctor h where
+  hfmap :: (forall b . f b -> g b) -> h '(f, fs) a -> h '(g, fs) a
+\end{code}
+
+Having instructions be parameterized on the program monad makes it possible to define instruction sets compositionally using, for instance, a technique like Data Types \`{a} La Carte~\cite{DTC}. In the original Operational Monad this could be only done for simple instructions, but with our new program type it can be done even for \emph{control instructions}---instructions that take programs as arguments. Extensible instructions sets are particularly useful for the co-design language, as its hardware and software instructions can be reused for new platforms: we only need to add support for its intrinsic functions.
+
+As an example of how an new instruction can be defined, we introduce the \codei{If} construct:
+
+\begin{code}
+data ControlCMD fs a where
+  If :: exp Bool -> prog () -> prog () -> ControlCMD (P3 prog exp pred) ()
+\end{code}
+
+\noindent Note the use of the type parameter \codei{prog} to refer to sub-programs, \codei{exp} refers to pure expressions, and \codei{pred} refers to type predicates. Although \codei{pred} is not used in the definition of \codei{If}, it is used by other instructions and therefore included here to keep the parameter lists consistent. \codei{P3} is a short-hand for a parameter list of three arguments.
+
+Assuming we have already defined a few other instructions like \codei{If}, we can now make program types that combine several instructions with the \codei{:+:} operator from Data Types \`{a} La Carte; for example:
+
+\begin{code}
+type MyProgram = Program (If :+: Reference :+: ...) (P2 Exp Pred)
+\end{code}
+
+\noindent The recursive \codei{Program} type then sets the type of sub-programs in \codei{If} to \codei{MyProgram}, with \codei{Exp} and \codei{Pred} used as the expression and predicate types.
+
+In order to use the \codei{interpret} function, \codei{If} needs to be an instance of the \codei{Interp} and \codei{HFunctor} classes. Both \codei{Interp} and \codei{HFunctor} do however distribute over \codei{:+:}, which means that it is possible to interpret any instruction set as long as its individual instructions have instances for the respective classes. The \codei{HFunctor} instance is straightforward:
+
+\begin{code}
+instance HFunctor ControlCMD where
+  hfmap f (If c thn els) = If c (f thn) (f els)
+\end{code}
+
+\noindent Interpretation of \codei{If} in, for example, the \codei{IO} monad could look as follows:
+
+\begin{code}
+instance Interp ControlCMD IO fs where
+  interp (If b tru fls) = if evalExp b then tru else fls
+\end{code}
+
+\noindent Where \codei{evalExp} is an evaluator for the expression language.
+
+\section{Expressions}
+\label{expr}
+
+A language embedding based on monads gives users a representation of the statements in an imperative program, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our co-design library interprets and computes to produce a new value. As a small example, consider a function for squaring a value:
 
 \begin{code}
 square :: (Num (exp a), Type exp a) => exp a -> exp a
 square a = a * a
 \end{code}
 
-\noindent Note that the type constraint on \codei{a} is slightly different that before as we use \codei{Type} instead of \codei{TypeM}: the former is designed to be used with expressions rather than monads.
+\noindent Note that the \codei{Type} constraint on \codei{a} is slightly different than \codei{TypeM} from section~\ref{program}, as \codei{Type} accepts expressions rather than monads for its first argument.
+
+% that before as we use \codei{Type} instead of \codei{TypeM}: the former is designed to be used with expressions rather than monads.
+
+Programming with expressions in our co-design language is evidently quite similar to how its done in regular Haskell. For instance, applying the squaring function to a value of $5$ is equivalent to the mathematical expression $5*5$ which evaluates to $25$. However, the expressions used in our co-design language are deeply embedded, and as we saw in section~\ref{domain}, that means evaluation isn't the only interpretation they support. In fact, by substituting the general \codei{exp} type for either the software or hardware expression type, \codei{SExp} and \codei{HExp}, we can also compile the expression.
 
 In simple expressions, like the above squaring function, the resulting value is usually one of various primitive types such as signed and unsigned numerical, floating point, and logical. However, in more elaborate expressions it can be a complex data type. For example, we can define an expression over a pair of values, and we can define functions over these pairs as well:
 
@@ -221,36 +278,53 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates.
-
-Before we can compile a function like \codei{dist}, we need to get its input from somewhere and then do something with its output---remember that lazy evaluation will remove unused functions before compilation. A convenient way to read input in software is to use the \codei{fget} function, while \codei{printf} can be used to write the output:
+\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. These pair are however only syntactic suger, and no pairs will appear in the generated code. In fact, expressions provide a number of abstractions that we are accustomed to as functional programmers, like let-bindings:
 
 \begin{code}
-distProg :: Software ()
-distProg = do
-  a <- fget stdin
-  b <- fget stdin
-  printf "dist: %d\n" (dist (a, b) (b, a))
+class Let exp where
+  share :: (Type exp a, Type exp b) => exp a -> (exp a -> exp b) -> exp b
 \end{code}
 
-Compiling \codei{distProg} produces the following code:
+Abstractions are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations, such as the sharing of values through let-bindings. At the same time, abstractions can complicate the compiler and make it harder to generate efficient code. To circumvent this problem the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one with features like let-bindings that is easy to program with.
+
+In order to avoid having two separate instances of each interpretation for expressions, which is tedious and error-prone task, we provide an elaboration from the feature rich expressions into program snippets over the primitive expressions:
 
 \begin{code}
-Generated C code goes here.
+elaborateSExp :: SExp a -> Program SIns (P2 CExp SType) (CExp a)
 \end{code}
 
-\noindent Note that there are no pairs in the generated C code, as the different coordinates simply become four separate references to the two input variables.
+\noindent Where \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} are the primitive expressions. The program wrapping is necessary as, for instance, let-bindings are translated into references. Fortunately, programs are regular monads like any other, we can use the \codei{interpret} function to elaborate entire software programs
+
+\begin{code}
+elaborateSoft :: Software a -> Program SIns (P2 CExp SType) a
+elaborateSoft = interpret
+\end{code}
+
+\noindent Assuming we use \codei{elaborateSExp} to give an \codei{Interp} instance.
+
+An evaluator for software programs can thus be defined by stringing together the elaboration of expressions with an interpreter for programs:
+
+\begin{code}
+runSoft :: Software a -> IO a
+runSoft = interpert . elaborateSoft
+\end{code}
+
+This approach to expressions has several benefits: the translation is typed, which rules out many potential errors, and is easier to write than a complete translation into source code; the low-level expression type is reusable, and can be shared as an elaboration target between multiple high-level expression types.
 
 \section{Communicating Components}
 
 The ability to write generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
-% Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features. The full specification of AXI4 provides great flexibility to users, and provides advanced burst and streaming transactions. For simpler programs, like the examples we have seen so far, there is no real need for such advanced features---although burst writing of arrays is desirable they are usually small enough to not impact performance. A lighter interconnect is therefore also specified by AXI4, called AXI4-lite. This subset of the full specification forgoes the more advanced features for a simpler communication model of writing and reading single pieces of data, one at a time.
+Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, there is no need for such features in the examples we have shown so far. The lighter interconnect offered by AXI4-lite is however a better fit, and will be the focus in this section.
 
-Five channels make up the whole AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Both signals and processes are supported by our co-design library, and the whole AXI4-lite interface can in fact be implemented within the library---while the full AXI4 interface could certainly be implemented as well, we have yet to do so.
+% Although burst writing of arrays is desirable they are usually small enough to not impact performance.
+
+Five channels make up the bulk of the AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These five channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Both signals and processes are supported by our co-design library, and the whole AXI4-lite interface is in fact implemented within the co-design library:
+
+% ---while the full AXI4 interface could certainly be implemented as well, we have yet to do so.
 
 \begin{code}
-axi4light ::
+axi4lite ::
   => Signature a
   -> Signature (
           Sig (Bits 32) -- ^ Write address.
@@ -275,36 +349,45 @@ axi4light ::
        -> ())
 \end{code}
 
+\codei{axi4lite} accepts a hardware component and automatically connects it to an AXI4-lite interconnect, moving values between the component and the read and write channels of the interconnect. The connected component can then be loaded into a synthesis tool like Vivado~\cite{feist2012}, which results in a physical design that can be put onto, for example, the logic blocks of an FPGA.
+
 % A function called \codei{axi_ligth} takes a hardware program and hooks it up to an AXI4-lite interconnect, and the wrapped hardware component can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical design that can be put onto the FPGA.
 
-With the ability to wrap our hardware programs in an AXI4-lite interface, we can create a stand-alone component that, when loaded into a synthesis tool like Vivado~\cite{feist2012}, results in a physical design that can be put onto an FPGAs logic blocks. With a physical component on the hardware, its possible to gets its address, which can then be used from the software side to access the component through memory-mapped I/O. In the co-design library, this is achieved with the \codei{mmap} function:
+With a component on the hardware we can interface with it using portmaps as usual, but with the physical address of the component in hand we can also memory-mapped I/O to access it from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, a memory-mapped component can be reached from software by simply writing to and reading from pointers.
+
+% The components monitor a processors address buss and, whenever an address for component is accessed, they forward the request to the address component.
+
+The co-design library provides a function called \codei{mmap} that preforms the necessary memory-mapping when given a component and its address:
 
 \begin{code}
 mmap :: String -> Component a -> Software (Pointer (Soften a))
 \end{code}
 
-Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. So, the components can monitor a processors address buss and, whenever an address for component is accessed, they forward the request to the address component. That is, the shared address space means that a component can be reached by writing to and reading from regular pointers. Before we can do that however, we first ``soften'' its type and translate, for example, signals into references:
-
-% The translation of a component's type, which expects signals as input and output, into a software type, that uses references instead of signals, is done by the \codei{Soften} translation:
+\noindent Note that the resulting memory pointer has ``soften'' its type, which replaces hardware types like signals with their corresponding type in software. The translation between hardware and software types is described by the type family \codei{Soften}, part of which is define as follows:
 
 \begin{code}
 type family Soften a where
-  Soften (Signal a -> b) = Ref (SExp a) -> Soften b
+  Soften ()           = ()
+  Soften (Sig a -> b) = SRef a -> Soften b
+  --dotLine
 \end{code}
 
-% \codei{mmap} takes two arguments: an address and a signature of the hardware component. Signatures are regular programs coupled with a description of their type that can be viewed from within Haskell, something we cannot normally do. The result is of \codei{mmap} is a pointer to the component with a type that has been translated to make use of software constructs like references instead of the signals used in hardware. This translation is handled by a type family, which describes how the hardware type should be interpreted as software instead:
-
-With a hardware component placed onto the FPGA and memory-mapped into software, we can call the component by fully applying its software pointer to its arguments:
+At this point, we have provided a means to load a hardware component onto, for instance, an FPGA's logic blocks and then have it memory-mapped into software. The remaining step is a method to call the component and get its result. In order to call the component, we must first construct a list of argument using these three functions:
 
 \begin{code}
-call :: Pointer a -> Arguments a -> Software ()
+nil   :: Argument ()
+(:>)  :: SType a => SRef a -> Argument b -> Argument (SRef a -> b)
+(:>>) :: SType a => SArr a -> Argument b -> Argument (SArr a -> b)
 \end{code}
 
-Text.
+\noindent Where \codei{nil} creates an empty argument list, and the two infix functions \codei{(:>)} and \codei{(:>>)} extends an argument list with a reference and an array, respectively. The argument list itself is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match.
+
+Calling a component once we have our arguments is done by using \codei{call}:
 
 \begin{code}
--- Example code.
+call :: Pointer a -> Argument a -> Software ()
 \end{code}
 
+\noindent Which goes through the argument list and writes each value that's marked as an input, while those marked as outputs store the result read from the component.
 
 \end{document}

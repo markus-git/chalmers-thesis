@@ -242,7 +242,7 @@ dotVec xs ys = sum (zipWith (*) xs ys)
 
 The above version of the dot product is not only closer to its mathematical specification than the sequential one, but also sturdier in the sense that its harder for users to make an error. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}.
 
-For a full implementation of the FIR filter, the vector language is however found to be lacking in expressiveness: the library excel at describing array transformations, whereas the filter is described by a recurrence equation where output depends on previous input values. Nevertheless, the vector library does provide a few such recurrence functions, and we use one of them to implement the full filter:
+For a full implementation of the FIR filter, the vector language is however a bit outside its comfort zone: the library excel at describing array transformations, whereas the filter is described by a recurrence equation where output depends on previous input values. Nevertheless, the vector library does provide a few such recurrence functions, and we use one of them to implement the full filter:
 
 \begin{code}
 firVec :: Num a => Vec a -> Vec a -> Program (Arr a)
@@ -273,7 +273,7 @@ dels :: Exp a -> Sig a -> [Sig a]
 dels e as = iterate (delay e) as
 \end{code}
 
-\noindent That is, a summation and a multiplication with coefficients, forming a dot product together, and a number of successive delays to form the ``taps''. Note that addition and multiplication are lifted to operate element-wise over signals, and \codei{constant} and \codei{delay} are signal functions that introduces a constant signal and a unit delay, respectively. The list operations \codei{foldr1}, \codei{zipWith}, \codei{map}, and \codei{iterate} are all part of Haskell's standard functions.
+\noindent That is, a summation and a multiplication with coefficients, forming a dot product together, and a number of successive delays to form the taps. Note that addition and multiplication are lifted to operate element-wise over signals, and \codei{constant} and \codei{delay} are signal functions that introduces a constant signal and a unit delay, respectively. The list operations \codei{foldr1}, \codei{zipWith}, \codei{map}, and \codei{iterate} are all part of Haskell's standard functions.
 
 A full FIR filter can now be expressed as:
 
@@ -282,7 +282,7 @@ firSig :: Num a => [Exp a] -> Sig a -> Sig a
 firSig coeffs = sums . muls coeffs . dels 0
 \end{code}
 
-\noindent Which is quite close to the filter's mathematical specification, but also its graphical representation: the input signal is delayed to form the filter's ``taps'', where each ``tap'' is multiplied with a coefficient and then summed together.
+\noindent Which is quite close to the filter's mathematical specification, but also its graphical representation: the input signal is delayed to form the filter's taps, where each ``tap'' is multiplied with a coefficient and then summed together.
 
 Locking the type signature of \codei{firSig} to signals over 32-bit integers, like we did with the vector version, we can compile the function to C:
 

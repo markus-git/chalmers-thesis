@@ -278,14 +278,16 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. These pair are however only syntactic suger, and no pairs will appear in the generated code. In fact, expressions provide a number of abstractions that we are accustomed to as functional programmers, like let-bindings:
+\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. The pairs are however syntactic suger, and no pairs will appear in the generated code.
+
+Expressions provide a number of abstractions that we are accustomed to as functional programmers, like let-bindings:
 
 \begin{code}
 class Let exp where
   share :: (Type exp a, Type exp b) => exp a -> (exp a -> exp b) -> exp b
 \end{code}
 
-Abstractions are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations, such as the sharing of values through let-bindings. At the same time, abstractions can complicate the compiler and make it harder to generate efficient code. To circumvent this problem the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one with features like let-bindings that is easy to program with.
+\noindent Abstractions like the let-binding are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations. At the same time, abstractions can complicate the compiler and make it harder to generate efficient code. To circumvent this problem the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one with features like let-bindings that is easy to program with.
 
 In order to avoid having two separate instances of each interpretation for expressions, which is tedious and error-prone task, we provide an elaboration from the feature rich expressions into program snippets over the primitive expressions:
 
@@ -397,14 +399,16 @@ dotSeq :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
   -> Program (Exp m a)
 \end{code}
 
-Text.
+\noindent Normally we cannot inspect the function's type from within Haskell, so before we can hook up the function to an AXI4-lite interconnect we need to give it a type signature that we can read:
 
 \begin{code}
 dotSig :: Signature (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
 dotSig = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dotSeq a b
 \end{code}
 
-Text.
+\noindent Where \codei{inputArr} adds a size array to the signature and \codei{returnC} rounds of the signature with the dot product. 
+
+The signature 
 
 \begin{code}
 program :: Software ()

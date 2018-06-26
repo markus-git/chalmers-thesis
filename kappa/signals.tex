@@ -18,25 +18,8 @@
 \begin{document}
 
 \chapter{Signal processing}
-\label{signals}
 
-While the imperative implementation of the FIR filter form section~\ref{haskell} is already convenient for software realization, representing the filter compositionally can yield a better intuition of what constitutes it; domain experts in digital signal processing tend to be comfortable with composing sub-components to form larger programs. The vector library and its shallowly embedded interface does provide a means to easily write array based functions in such a way, but does not capture the streaming of the FIR filter as well. To better describe streaming we are better of using our signal library, for digital signal processing.
-
-The signal library is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot have a signal over other signals.
-
-Programming of signals is done compositionally, and a set of functions is provided to support the composition of new signals from existing ones. For instance, some of the supplied functions are:
-
-\begin{code}
-repeat :: Type a => Exp a -> Sig a
-lift   :: Type a => (Exp a -> Exp b) -> Sig a -> Sig b
-delay  :: Type a => Exp a -> Sig a -> Sig a
-\end{code}
-
-\noindent Where \codei{repeat} creates a signal by repeating some value; \codei{lift} promotes a function over values to work element-wise over signals; \codei{delay} prepends a value to a signal, delaying its original output by one time instant. While we made use of the fixed expression langauge \codei{Exp} here, signals can actually accept any expression type.
-
-%These functions all represent different nodes in the signal processing graph that sits behind a function.
-
-While this interface may appear innocent, \codei{repeat} and \codei{lift} can express any combinatorialy signal while the combination of \codei{delay} with feedback can describe any kind of sequential signal network. For example, the the FIR filter can be expressed quite nicely using signals. Before we can do that however, we first define three helper functions that implement the three majort components of the filter: a number of successive unit delays, multiplication with coefficients and a summation.
+For example, the the FIR filter can be expressed quite nicely using signals. Before we can do that however, we first define three helper functions that implement the three majort components of the filter: a number of successive unit delays, multiplication with coefficients and a summation.
 
 \begin{code}
 sums :: (Num a, Type a) => [Sig a] -> Sig a

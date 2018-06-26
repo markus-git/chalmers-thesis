@@ -14,7 +14,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[../main.tex]{subfiles}
+\documentclass[../paper.tex]{subfiles}
 \begin{document}
 
 \chapter{Co-Design}
@@ -399,16 +399,20 @@ dotSeq :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
   -> Program (Exp m a)
 \end{code}
 
-\noindent Normally we cannot inspect the function's type from within Haskell, so before we can hook up the function to an AXI4-lite interconnect we need to give it a type signature that we can read:
+\noindent The above type signature is however not something we can normally inspect from within Haskell, so before the function can be hooked up to an AXI4-lite interconnect and put onto hardware we must first give a signature that can be read by other functions. Seeing as the function accepts two input arrays and produces an expression as output, we can give it the following signature:
+
+% \noindent Normally we cannot inspect the dot products type from within Haskell, so before we can hook up the function to an AXI4-lite interconnect we need to give it a type signature that we can read:
 
 \begin{code}
 dotSig :: Signature (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
 dotSig = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dotSeq a b
 \end{code}
 
-\noindent Where \codei{inputArr} adds a size array to the signature and \codei{returnC} rounds of the signature with the dot product. 
+\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the signature with a signal for the dot product's output.
 
-The signature 
+Signatures like \codei{dotSig} can be inspected by other functions from within Haskell. As a result, they can be connected to other components and hooked up to an interconnect. One such interconnect is the previously mentioned AXI4-lite interconnect, for which the co-design language provides a function called \codei{compileAXI4lite} that automatically connects a signature and outputs the resulting hardware design. Applying the compiler to our \codei{dotSig} we get a design that can be fed into a hardware synthesizers, which in turn produces a physical implementation of the dot-product that we can put onto hardware.
+
+In order to communicate with our offloaded dot-product from software we need its physical address from the synthesis tool, which is ``0x4C300000'' in our case. In addition to getting the component's address, we also need to connect to our component from software with \codei{mmap} and create the two arrays and reference that will hold the dot-products inputs and output. Having done all these steps, we can call the dot-product and read its result from the reference. A program that performs these can be written as:
 
 \begin{code}
 program :: Software ()
@@ -422,6 +426,66 @@ program = do
   printf "%d\n" val
 \end{code}
 
+\noindent Which will call the component and print its result to standard output.
+
+\section{Vectors}
+
 Text.
+
+\section{Signal processing}
+
+\label{signals}
+
+While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time however, the vector language is best suited for dealing with regular access to earlier values. Functions that make use of irregular access, or are better expressed through streaming directly rather than being turned into a function over arrays, we provide the signal language.
+
+The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals.
+
+Programming of signals is done compositionally, and a set of functions is provided to support the composition of new signals from existing ones. That is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals. For instance, some of the supplied combinatorial functions include:
+
+\begin{code}
+repeat :: pred a => exp a -> Sig exp pred a
+
+map :: (pred a, pred b) => (exp a -> exp b)
+  -> Sig exp pred a -> Sig exp pred b
+
+zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c)
+  -> Sig exp pred a -> Sig exp pred b -> Sig exp pred c
+\end{code}
+
+\noindent \codei{repeat} creates a signal by repeating some value; \codei{map} applies a function to each value of a signal; \codei{zipWith} joins two signals element-wise using then given function. The general idea behind is that every ground type, as permitted by the expression language, is lifted to operate element-wise over signals. This can either be done by redefining standard Haskell functions, as we have done with \codei{repeat}, \codei{map} and \codei{zipWith}, or through type classes like \codei{Num}---for classes that cannot be instantiated with signals we provide a new class that mimics the original.
+
+So far the functions we shown are combinatorial. Most interesting examples of signal processing does however carry some form of state. For this reason, a sequential operator is also provided by the signal language:
+
+\begin{code}
+delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
+\end{code}
+
+\noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant. Note that \codei{delay} introduces the notion of a \emph{next time step}, making time enumerable.
+
+While these functions may appear innocent, \codei{repeat}, \codei{map} and \codei{zipWith} can express most combinatorial signal networks, while the combination of \codei{delay} with feedback can describe any kind of sequential signal network. As an example, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback.
+
+An IIR filter is typically described and implemented in terms of a difference equation:
+
+\begin{equation}
+y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \: - \: \sum_{j=1}^{Q} a_{j} \cdot y_{n-j} \right)
+\end{equation}
+\vspace{1mm}
+
+\noindent $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients.
+
+Examining the above equation we see that a IIR filter loosely consists of two FIR filters, where the bottom FIR filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
+
+\begin{code}
+iir :: (Fractional a, Num a, pred a) => exp a -> [exp a] -> [exp a]
+  -> Sig exp pred a -> Sig exp pred a
+iir a0 as bs x = y
+  where
+    y = (1 / repeat a0) * (upper x - lower y)
+    upper = fir bs
+    lower = fir as . delay 0
+\end{code}
+
+\noindent A circular definition of \codei{y} is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
+
 
 \end{document}

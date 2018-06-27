@@ -428,13 +428,63 @@ program = do
 
 \section{Vectors}
 
-Text.
+Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays gives a designer full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
+
+A typical vector computation starts with a ``manifest'' vector, that is, a vector which refers directly to an array in memory. Vector operations are then applied, where these operations are overloaded to accept any ``pully'' vector with another ``pully'' vector as result. Then, once the various vectors have been constructed, they are assembled into a ``pushy'' vector and written to memory, resulting in a new ``manifest'' vector.
+
+The various names for ``manifest'', ``pully'' and ``pushy'' draw inspiration from the Pan language~\cite{} and push arrays~\cite{}, the ideas of which our vectors are based on. Manifest vectors are more often than not immutable arrays provided by the co-design language, as such arrays have an representation in memory. A Push vector on the other hand is not stored in memory, but is rather represented as a function:
+
+\begin{code}
+data Pull exp a where
+  Pull :: exp Length -> (exp Index -> a) -> Pull exp a
+\end{code}
+
+\noindent Where \codei{Length} and \codei{Index} are both aliases for 32-bit integers.
+
+A pull vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
+
+% A pull vector is not monadic, as it is restricted to pure expressions for computing its elements. 
+
+Push vectors go in the opposite direction of pull vectors, and give us control over a vectors evaluation to the producers rather than the consumer. That is, pull vectors have a representation that supports nested writes to memory and fusion of operations. Push vectors are represented as:
+
+% This differences is reflected in the representation of pull vectors as they include monadic effects:
+
+\begin{code}
+data Push m a where
+  Push :: Exp m Length -> ((Exp m Index -> a -> m ()) -> m ()) -> Push m a
+\end{code}
+
+A push vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either the co-design's two languages and have the push vector's function write each element to an array.
+
+As an example, we define a function that computes the sum of the square of the numbers from one to $n$:
+
+\begin{code}
+squares :: (Num a, Type exp a) => exp a -> exp a
+squares n = sum $ map (\x -> x * x) (1 ... n)
+\end{code}
+
+\noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values from one to $n$, to which a mapping is applied that squares each element. The vector is then converted into a push vector and summed up into a single value.
+
+Each vector type has a different set of operations associated with it, and these operations are chosen in such a way that each vector type only supports those operations which can be performed efficiently for that type. In many cases, the vector type is guided by the types of the operations involved, and follows the typical pattern of a manifest vector being turned into a pull vector, which turns into a push vector, which is then written to memory and turns back into a manifest vector. There are however cases where its preferable to ``skip'' parts of the cycle. For instance, the \codei{squares} function starts with a pull vector rather than a manifest vector.
+
+The functions associated with each kind of vector are overloaded in the kind of vectors they accept: an operation for a pull vector will support the use of any ``pully'' vector type. For instance, the \codei{sum} function used in the above \codei{squares} is defined as follows:
+
+\begin{code}
+sum :: (Pully exp vec a, Type exp a, Num a) => vec -> a
+sum = fold (+) 0
+\end{code}
+
+\noindent Where \codei{Pully} summaries the qualities a vector needs to fulfill for it to be considered ``pully''.
+
+\begin{code}
+class ViewManifest m vec a => Manifestable m vec a | vec -> a where ...
+\end{code}
 
 \section{Signal processing}
 
 \label{signals}
 
-While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time, the vector language is best suited for dealing with regular access to earlier values. Functions that make use of irregular access, or are better expressed through streaming directly rather than being turned into a function over arrays, we provide the signal language.
+While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time, or are simply better expressed through streaming directly rather than being converted into a function over arrays, we provide the signal language.
 
 % TODO: last sentence above is bad.
 

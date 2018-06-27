@@ -311,7 +311,7 @@ runSoft = interpert . elaborateSoft
 
 This approach to expressions has several benefits: the translation is typed, which rules out many potential errors, and is easier to write than a complete translation into source code; the low-level expression type is reusable, and can be shared as an elaboration target between multiple high-level expression types.
 
-\section{Communicating Components}
+\section{Components}
 
 The ability to write generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
@@ -476,9 +476,7 @@ sum = fold (+) 0
 
 \noindent Where \codei{Pully} summaries the qualities a vector needs to fulfill for it to be considered ``pully''.
 
-\begin{code}
-class ViewManifest m vec a => Manifestable m vec a | vec -> a where ...
-\end{code}
+As both pull and push vectors are represented by functions, they are't compiled to programs as per say. Rather, those vectors are turned into manifest vectors which have a direct representation in both software and hardware. This, together with the overloading of vector types, enables programs to seamlessly incorporate vectors.
 
 \section{Signal processing}
 

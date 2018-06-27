@@ -278,7 +278,7 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. The pairs are however syntactic suger, and no pairs will appear in the generated code.
+\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. The pairs are simply syntactic suger, and no pairs will appear in the generated code.
 
 Expressions provide a number of abstractions that we are accustomed to as functional programmers, like let-bindings:
 
@@ -295,14 +295,12 @@ In order to avoid having two separate instances of each interpretation for expre
 elaborateSExp :: SExp a -> Program SIns (P2 CExp SType) (CExp a)
 \end{code}
 
-\noindent Where \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} are the primitive expressions. The program wrapping is necessary as, for instance, let-bindings are translated into references. Fortunately, programs are regular monads like any other, we can use the \codei{interpret} function to elaborate entire software programs
+\noindent Where \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} are the primitive expressions. The program wrapping is necessary as, for instance, let-bindings are translated into references. Fortunately, programs are regular monads like any other, we can use the \codei{interpret} function to elaborate entire software programs, assuming we use \codei{elaborateSExp} to give an \codei{Interp} instance.
 
 \begin{code}
 elaborateSoft :: Software a -> Program SIns (P2 CExp SType) a
 elaborateSoft = interpret
 \end{code}
-
-\noindent Assuming we use \codei{elaborateSExp} to give an \codei{Interp} instance.
 
 An evaluator for software programs can thus be defined by stringing together the elaboration of expressions with an interpreter for programs:
 
@@ -317,7 +315,7 @@ This approach to expressions has several benefits: the translation is typed, whi
 
 The ability to write generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
-Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, there is no need for such features in the examples we have shown so far. The lighter interconnect offered by AXI4-lite is however a better fit, and will be the focus in this section.
+Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, there is no need for such features in the examples we have shown so far. The lighter interconnect offered by AXI4-lite is a better fit for our examples and will be the focus in this section.
 
 % Although burst writing of arrays is desirable they are usually small enough to not impact performance.
 
@@ -436,7 +434,9 @@ Text.
 
 \label{signals}
 
-While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time however, the vector language is best suited for dealing with regular access to earlier values. Functions that make use of irregular access, or are better expressed through streaming directly rather than being turned into a function over arrays, we provide the signal language.
+While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time, the vector language is best suited for dealing with regular access to earlier values. Functions that make use of irregular access, or are better expressed through streaming directly rather than being turned into a function over arrays, we provide the signal language.
+
+% TODO: last sentence above is bad.
 
 The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals.
 
@@ -454,7 +454,7 @@ zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c)
 
 \noindent \codei{repeat} creates a signal by repeating some value; \codei{map} applies a function to each value of a signal; \codei{zipWith} joins two signals element-wise using then given function. The general idea behind is that every ground type, as permitted by the expression language, is lifted to operate element-wise over signals. This can either be done by redefining standard Haskell functions, as we have done with \codei{repeat}, \codei{map} and \codei{zipWith}, or through type classes like \codei{Num}---for classes that cannot be instantiated with signals we provide a new class that mimics the original.
 
-So far the functions we shown are combinatorial. Most interesting examples of signal processing does however carry some form of state. For this reason, a sequential operator is also provided by the signal language:
+So far the functions we shown are combinatorial. Most interesting examples of signal processing does carry some form of state. For this reason, a sequential operator is also provided by the signal language:
 
 \begin{code}
 delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
@@ -462,7 +462,15 @@ delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
 
 \noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant. Note that \codei{delay} introduces the notion of a \emph{next time step}, making time enumerable.
 
-While these functions may appear innocent, \codei{repeat}, \codei{map} and \codei{zipWith} can express most combinatorial signal networks, while the combination of \codei{delay} with feedback can describe any kind of sequential signal network. As an example, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback.
+While these functions may appear innocent, \codei{repeat}, \codei{map} and \codei{zipWith} can express most combinatorial signal networks, while the combination of \codei{delay} with feedback can describe any kind of sequential signal network. For instance, we can define a parity checker as:
+
+\begin{code}
+parity :: Sig exp pred Bool -> Sig exp pred Bool
+parity inp = out where
+  out = zipWith xor (delay false out) input
+\end{code}
+
+As a larger example of feedback, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback.
 
 An IIR filter is typically described and implemented in terms of a difference equation:
 
@@ -471,9 +479,9 @@ y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \:
 \end{equation}
 \vspace{1mm}
 
-\noindent $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients.
+\noindent Where $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and isn't part of the feedback sum.
 
-Examining the above equation we see that a IIR filter loosely consists of two FIR filters, where the bottom FIR filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
+Examining the above equation we see that a IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
 
 \begin{code}
 iir :: (Fractional a, Num a, pred a) => exp a -> [exp a] -> [exp a]
@@ -485,7 +493,29 @@ iir a0 as bs x = y
     lower = fir as . delay 0
 \end{code}
 
-\noindent A circular definition of \codei{y} is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
+A circular definition of \codei{y} is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
 
+This behavior of \codei{delay} implies that we can distinguish values that have and haven't been delayed, which is something that's normally not possible to do in Haskell---as being able to observe the sharing of \codei{y} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows us to turn signal functions like the above IIR filter, which describes a network of operations, into a directed graph. Any sharing is then visible as edges in the graph, connecting nodes over its operations.
+
+A graph representation of a signal network enables us to check for cycles, order the nodes, and, finally, compile them into programs. A regular program does however not capture the streaming nature of a signal function, as it represents an action we can run in order to produce a value. So instead of compiling to program directly, the signal language translates a signal into an co-iterative stream~\cite{caspi1998}.
+
+Co-iteration consists of associating to each stream an initial state and a transition function from old state to a pair of a value and a new state. The benefit of this approach is that it allows us to handle infinite data types, like streams, in a strict and efficient way. A slightly modified version of co-iterative streams is provided by the signal language, where state is represented implicitly by the \codei{Program} monad:
+
+\begin{code}
+data Stream instr exp pred a where
+  Stream :: Program instr (P2 exp pred) (Program instr (P2 exp pred) a)
+    -> Stream instr exp pred a
+\end{code}
+
+\noindent The outer monad is used to initialize the stream, where the result of the initialization is another program that produces the output values.
+
+The compiler for signal functions is then given as transformation from a function over signals to a function over streams:
+
+\begin{code}
+compileF1 :: (Sig exp pred a -> Sig exp pred b)
+  -> IO (Str instr exp pred a -> Str instr exp pred b)
+\end{code}
+
+\noindent Where the \codei{IO} type is a result of observable-sharing.
 
 \end{document}

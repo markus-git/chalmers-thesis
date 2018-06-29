@@ -327,25 +327,25 @@ Five channels make up the bulk of the AXI4-lite specification: the read and writ
 axi4lite ::
   => Signature a
   -> Signature (
-          Sig (Bits 32) -- ^ Write address.
-       -> Sig (Bits 3)  -- ^ Write channel protection type.
-       -> Sig Bit       -- ^ Write address valid.
-       -> Sig Bit       -- ^ Write address ready.
-       -> Sig (Bits 32) -- ^ Write data.
-       -> Sig (Bits 4)  -- ^ Write strobes.
-       -> Sig Bit       -- ^ Write valid.
-       -> Sig Bit       -- ^ Write ready.
-       -> Sig (Bits 2)  -- ^ Write response.
-       -> Sig Bit       -- ^ Write response valid.
-       -> Sig Bit       -- ^ Response ready.
-       -> Sig (Bits 32) -- ^ Read address.
-       -> Sig (Bits 3)  -- ^ Protection type.
-       -> Sig Bit       -- ^ Read address valid.
-       -> Sig Bit       -- ^ Read address ready.
-       -> Sig (Bits 32) -- ^ Read data.
-       -> Sig (Bits 2)  -- ^ Read response.
-       -> Sig Bit       -- ^ Read valid.
-       -> Sig Bit       -- ^ Read ready.    
+          Sig (Bits 32) -- Write address.
+       -> Sig (Bits 3)  -- Write channel protection type.
+       -> Sig Bit       -- Write address valid.
+       -> Sig Bit       -- Write address ready.
+       -> Sig (Bits 32) -- Write data.
+       -> Sig (Bits 4)  -- Write strobes.
+       -> Sig Bit       -- Write valid.
+       -> Sig Bit       -- Write ready.
+       -> Sig (Bits 2)  -- Write response.
+       -> Sig Bit       -- Write response valid.
+       -> Sig Bit       -- Response ready.
+       -> Sig (Bits 32) -- Read address.
+       -> Sig (Bits 3)  -- Protection type.
+       -> Sig Bit       -- Read address valid.
+       -> Sig Bit       -- Read address ready.
+       -> Sig (Bits 32) -- Read data.
+       -> Sig (Bits 2)  -- Read response.
+       -> Sig Bit       -- Read valid.
+       -> Sig Bit       -- Read ready.    
        -> ())
 \end{code}
 
@@ -363,7 +363,7 @@ The co-design library provides a function called \codei{mmap} that preforms the 
 mmap :: String -> Component a -> Software (Pointer (Soften a))
 \end{code}
 
-\noindent Note that the resulting memory pointer has ``soften'' its type, which replaces hardware types like signals with their corresponding type in software. The translation between hardware and software types is described by the type family \codei{Soften}, part of which is define as follows:
+\noindent Note that the resulting memory pointer has ``soften'' its type, which replaces hardware types like signals with their corresponding type in software. The translation between hardware and software types is described by the type family \codei{Soften}:
 
 \begin{code}
 type family Soften a where

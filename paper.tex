@@ -60,13 +60,13 @@
 \usepackage{lipsum}\setlipsumdefault{1-3} % Package used to put in placeholder text. Remove it.
 
 % User commands
-\title{The Title of Your Thesis which might be very long}
-\author{Some Author} % Not common with more than one author
-\thesisin{Solid and Structural Mechanics}
-\department{Department of Applied Mechanics}
-%\division{Division of Solid Mechanics}
+\title{Title}
+\author{Markus Aronsson} % Not common with more than one author
+\thesisin{Area}
+\department{Department of Stuff}
+% \division{Division of Solid Mechanics}
 \reportno{2011:01}
-\ISBN{123-21332-13423-123} % Only for doctorate
+% \ISBN{123-21332-13423-123} % Only for doctorate
 \copyrightyear{2011}
 
 \opponent{
@@ -75,19 +75,44 @@ Department of Pop\\
 University of Somewhere\\
 Nigeria
 }
-\oppositiondate{10.00 am, 30\textsuperscript{th} May, 2011 in HA2 Hörsalsvägen 4, Göteborg}
+
+\oppositiondate{10.00 am, 22\textsuperscript{th} Oct, 2018 in HA2 Hörsalsvägen 4, Göteborg}
 
 % You should scale the figure according to textwidth and or paperheight.
 \coverfigure{\includegraphics[width=\textwidth,height=0.4\paperheight,keepaspectratio]{figures/ExampleCover}}
+
 \covercaption{Some explanation}
 
-\firstabstract{\lipsum}
-\keywords{Some stuff, More stuff, Stuff}
-\dedication{\textit{to my dear someone.}}
-\acknowledgements{\lipsum}
+\firstabstract{
+Developing software for embedded systems, in most cases, presents quite the challenge. Not only do they require good knowledge of the targeted hardware, but they are also designed with a very specific task in mind. That is, an embedded system is typically build with the most cost-effective hardware that meets its performance requirements. Developers must therefore ensure they take full advantage of the custom hardware while keeping their computations efficient. Furthermore, designers must often consider several other, non-functional properties, including: software partitioning, a computation should run on the component that best suits it; and memory layout, since resource constraints can be just as limiting as performance.
+
+Modern embedded systems often gain their performance from combining several kinds of co-processors, where each processor provides specialized processing capabilities to handle a particular task. Their efficiency does however come at a cost of increased complexity: co-processor specific code is interleaved with regular software code and hardware for the communication between co-processors. As a result, and considering the aforementioned design decisions, embedded systems can be quite difficult to program. Especially so considering that most embedded systems are programmed in low-level languages, like C or even assembler, which severely limits the portability of code.
+
+In this thesis we explore a functional approach to embedded systems development through or co-design language and its associated vector and signal processing languages. The functional approach allows for computations to be passed around as first-class objects and assembled in a modular wary into a larger applications. Also, thanks to the powerful type-systems of functional languages, these computations depend on specific operations rather than an entire language, which alleviates design exploration.
+
+A functional approach to embedded systems development does address many of the modularity problems with using low-level languages, those languages are mainly used for their fine control over a system's capabilities. The languages we present in this thesis are therefore staged in order to give the designer explicit control over a large portion of the generated code.
+}
+
+\keywords{functional programming, domain specific languages, signal processing, code generation}
+
+% \dedication{\textit{to my dearest}}
+
+\acknowledgements{
+To my dearest, my fianc\'ee Emma Bogren: because I owe it all to you.
+
+My constant cheerleaders, that is, my parents Dag and Lena: I am forever grateful for your moral and emotional support, you were always keen to know what I was doing and how I was proceeding. Although I'm fairly certain you never fully grasped what my work was all about, you never wavered in your encouragement and enthusiastic inquires. I am also grateful to my sibling Caroline who have supported me along the way, and her wonderful dog Alfons whom never failed to brighten my day.
+
+A very special gratitude goes out to my advisor Mary Sheeran, for your continuous help and support in my studies, for your never ending patience, guidance and immense knowledge. With a special mention to my former co-worker Emil Axelsson, without your precious support I would not have been able to conduct my research. I will always miss our interesting and long-lasting chats.
+
+I am also grateful to Anders Persson, Josef Svenningsson and Koen Claesson for their unfailing support and assistance. Your hard work, ideas and insights in the Feldspar project has proved a great source of inspiration in my research. Finally I express my gratitude to all my other colleagues at Chalmers, who make this a fantastic place to work.
+
+Thank you all for your encouragement!
+}
+
 \paperwork{\lipsum}
-%\secondabstract{swedish}{\lipsum} % Optional
-%\preface{\lipsum} % You can use \input to put preface and acknowledgements in another document
+
+% \secondabstract{swedish}{\lipsum} % Optional
+% \preface{\lipsum} % You can use \input to put preface and acknowledgments in another document
 
 % You can add extra contents such as abbreviations and nomenclature using.
 % Use \presectiontitle to render add titles to new sections.

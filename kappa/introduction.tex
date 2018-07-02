@@ -20,31 +20,21 @@
 \chapter{Introduction}
 \label{intro}
 
-Embedded systems are, in brief, any computer system that is part of a larger system but relies on its own microprocessor. It is embeddde as part of a larger machine to sovle a particular task, and often does so under memory and real-time constraints. Embedded systems have been have been around for decades, and still control many devices in common use today~\cite{barr2006}. For example, modern cars contain a number of embedded systems, each controlling a small function of the car; one system might control the brakes, while another displays information to the dashboard. In most cases, these embedded sub-systems are all connected together in a network. 
+Embedded systems are, in brief, any computer system that is part of a larger system but relies on its own microprocessor. It is embedded as part of a larger machine to solve a particular task, and often does so under memory and real-time constraints. Embedded systems have been have been around for decades, and still control many devices in common use today~\cite{barr2006}. For example, modern cars contain a number of embedded systems, each controlling a small function of the car; one system might control the brakes, while another displays information to the dashboard. In most cases, these embedded sub-systems are all connected together in a network. 
 
-Developing software for embedded systems, in most cases, requires good knowledge about the hardware on which the software is supposed to run. Because embedded systems are typically designed with a task in mind, their hardware systems are often built with most cost-effective processor that meets the performance requirements. Developers must therefore ensure that not only are their computations efficient, but also take full advantage of the custom hardware; every line of code counts.
+Developing software for embedded systems, in most cases, requires good knowledge about the hardware on which the software is supposed to run. This is because embedded systems are typically designed with a task in mind and consists of the most cost-effective hardware that meets the performance requirements. Developers must therefore ensure that not only are their computations efficient, but also take full advantage of the custom hardware; every line of code counts.
 
 As important as computational power is for embedded systems, limiting their power consumption presents an equally important issue in their architectural design~\cite{mudge2001}---the trend of trading power for performance cannot continue indefinitely. Containing the growth in power requires architectural improvements, with specialized computing for specialized tasks.
 
-Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems making use of more than one kind of processor. These heterogeneous systems gain their performance and energy efficiency not just by combining several processors, but rather by incorporating different kinds of co-processors that provide specialized processing capabilities to handle a particular task. Their efficiency and computational power comes at a cost of increased programming burden in terms of code complexity and portability, as hardware specific code is interleaved with software code to describe its various components and to handle any communication between co-processors.
+Heterogeneous computing represents an interesting development towards the goal of energy efficient computing, and refers to systems making use of more than one kind of processor. These heterogeneous systems gain their performance and energy efficiency not just by combining several processors, but rather by incorporating different kinds of co-processors that provide specialized processing capabilities to handle a particular task. Their efficiency and computational power comes at a cost of increased programming burden in terms of code complexity and portability. Hardware specific code is interleaved with software code to describe its various components and to handle any communication between co-processors.
 
-% Furthermore, the structure of application code typically vary between co-processors and any code written for one therefore requires modification when given a new target. In fact, despite all the advantages heterogeneous systems offer, their use so far has been mostly restricted to hardware programmers.
+A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C dialects for specific co-processors. While such low-level languages are good for extracting maximum performance from a processor, they provide little to no abstractions for alleviate the task of programming for heterogeneous systems.
 
-A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C dialects for specific co-processors and GPUs. While these languages are good for extracting maximum performance from a processor, they provide little to no abstractions for alleviate the task of programming for heterogeneous systems.
-
-% Designers have therefore looked for alternative solutions, where one of the more well-known approaches is synthesis of high-level languages like C~\cite{graphics2008, ghenassia2005}. Compiling high-level languages to a hardware description has great appeal, but finding a translation between the two has however proven to be difficult; sequential programs are often a bad fit for the parallelism inherent to most hardware architectures.
-
-Another group of languages whom I believe show great promise in describing hardware designs are the functional languages~\cite{sheeran2005}. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. Thanks to the abstractions, generalization and modularity that a functional language provide through its rich type system and higher-order functions, designers can build entire libraries of verified components. Larger system can thus be constructed by assembling smaller components.
-
-% Another beneficial attribute of these languages is their purity, which enables reasoning about function (de-)composition as a separate matter from their evaluation. Bluespec SystemVerilog~\cite{nikhil2004}, for example, is a functional language that provides high-level synthesis of its rule based programs into RTL.
+Another group of languages whom I believe show great promise in describing hardware designs are the functional languages. Higher-order functional languages in particular, where hardware descriptions are first-class objects, offer a particularly useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}. For instance, a higher-order functional language allows for computations to be passed around as first-class objects. Smaller functions can then be assembled in a modular way into a larger applications. Also, thanks to the powerful type-systems of functional languages, it is possible to precisely record a function's dependencies in its type; functions can depend on the smaller functions they use rather the entire domain they're part of.
 
 Despite the aforementioned benefits of functional programming languages, they are rarely considered for embedded system development. One reason for their low adaptation is that some features, while facilitating the design of hardware descriptions, also makes it difficult to give performance guarantees and resource bounds, especially so for functional languages with lazy evaluation.
 
-This thesis presents the first steps towards a functional programming language intended for embedded system development, where the entire design process of heterogeneous systems can be expressed. The language aims to go further than the aforementioned functional languages, and does not rely solely on hardware descriptions; some components are better described using sequential algorithms directly, rather than having one generated from a hardware description.
-
-Instead of taking on the full challenge of heterogeneous programming head on, we are currently interested in a more modest approach: develop a language where one can experiment with putting components in software or hardware, embed it in Haskell, and see how far we can get in the design of a modern heterogeneous system. Having implemented such a language, we also aim to use it as a compilation target for a vector programming language and a signal processing language. These two would serve as possible front-ends for the co-design language, raising the abstraction level of the numerical and signal processing typical of embedded systems.
-
-% Modern FPGAs show a lot of promise in heterogeneous computing as they combine programmable logic, discrete components and various co-processors with a good performance per Watt ration, all on a single system. Although this diversity of components is good for performance, it does make the system harder to program: its programmable logic is often described in a hardware description language while co-processors are described in a low-level dialect of C.
+This thesis presents the first steps towards a functional programming language for embedded heterogeneous systems. Instead of taking on the full challenge of heterogeneous programming head on, we are currently exploring a more modest approach: develop a hardware software co-design language, embed it in Haskell, and see how far we can get. The language is staged and utilizes the rich type system of its host language to facilitate design exploration. Furthermore, we have developed a vector and a signal processing language to accompany the co-design language.
 
 As an example of our co-design language, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors:
 
@@ -52,9 +42,7 @@ As an example of our co-design language, consider a dot product, also known as a
 a \cdot b = \sum_{i=1}^{n}a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + \cdots + a_{n}b_{n}
 \end{equation}
 
-% , starting with a single functional program, our co-design library is faced with three tasks: generate software for the application parts, hardware for the logical parts, and a mixture of software and hardware for the communication between components. As an example, consider a dot product, also known as a scalar product.
-
-In an imperative setting, like that of C, the dot product's result could be computed with a single for loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution can be implemented in the co-design language as well:
+With an imperative language like C the dot product's result could be computed with a single for-loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution can be implemented in the co-design language as well:
 
 \begin{code}
 dotSeq :: Arr Int32 -> Arr Int32 -> Program (Exp Int32)
@@ -67,54 +55,36 @@ dotSeq x y = do
   getRef sum
 \end{code}
 
-While the above function is faithful to its corresponding version in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using our dedicated vector programming language instead. In fact, the same dot product can be implemented with vectors in a single line of code:
+While the above function is faithful to its corresponding implementation in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using the vector language instead. In fact, the same dot product can be implemented with vectors in a single line:
 
 \begin{code}
 dotVec :: Vec Int32 -> Vec Int32 -> Program (Exp Int32)
 dotVec x y = sum (zipWith (*) x y)
 \end{code}
 
-% \noindent Furthermore, thanks to fusion of intermediate vectors, this function will generate code as efficient as the sequential version.
-
-Note that neither version of the dot functions so far mentions any software or hardware specifics and, as such, the functions could be realized in both languages. Lets however assume that we wish to put the second function onto hardware. Before we can offload the function, we must first give it a signature that describes its inputs/output:
-
-% Note that the dot function does not mention any software or hardware specific types or functions; \codei{dot} only makes use of vectors and a few numerical expressions. As a result, the function's type is kept general in the sense that it can be realized in both hardware and software. However, lets assume for the sake of our example that we wish to put the dot product on hardware. The function itself can already be compiled to VHDL, but in order to make it accessible in software we must first give it a signature:
+At this point we should note that neither version of the dot functions so far mentions any software or hardware specifics and, as such, the functions could be realized in both languages. Lets assume we wish to put \codei{dotVec} onto hardware. Before we can offload the function, we must first give it a signature that describes its inputs and output. For the dot-product, this means that we declare two input arrays with and a single output:
 
 \begin{code}
-dotSig :: Signature (Arr Int32 -> Arr Int32 -> Exp Int32)
+dotSig :: Signature (Arr Int32 -> Arr Int32 -> Sig Int32)
 dotSig = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
 \end{code}
 
-% \noindent Signatures describes a function's type in such a way that it can be inspected from within Haskell. In the case of our dot product, the signature tells us that it takes two input vectors of length four and returns a single value.
+The signature of a component lets us inspect a type from within Haskell and, for example, hook it up to an AXI4-lite interconnect which lets us reach the component from software through memory-mapped I/O. This process causes the component to share its address space with the memory of whatever software program they are running in, that is, the component can be reached by simply reading and writing to pointers into its address. The co-design language provides a \codei{compileAXI4lite} function that produces a synthesizable interconnect for a given function's signature.
 
-With access to the signature of a component we can, for example, connect it to an AXI4-lite interconnect, making the extended component available for memory-mapping in software. That is, the hardware component can be reached from software by reading and writing to specific bits of memory. We use the provided \codei{axi4lite} function to automatically extend a signed function with an AXI4-lite interconnect:
-
-% Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in, that is, the component can be reached by reading and writing to specific bits of memory. We use the provided \codei{axi4lite} function to automatically extend a signature with 
-
-% Having access to a description of hardware component enables us to connect it with an interconnect and put onto hardware as a physical component, which can then be memory-mapped into from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, the component can be reached by simply reading and writing to ordinary pointers into the components physical address.
-
-\begin{code}
-axi4lite :: Signature a -> Signature (Sig Bit -> Sig Bit -> ...)
-\end{code}
-
-After the component has been hooked up to an AXI4-lite interconnect, synthesized and put onto hardware, we write a small software program that interacts with the component and then prints its result:
+After the dot-product has been hooked up to an AXI4-lite interconnect, synthesized and put onto hardware, we can write a small software program that interacts with the component and prints its result:
 
 \begin{code}
 program :: Software ()
 program x y = do
-  dot <- mmap "0x43C0_0000" dotSig
-  x   <- initArray [1,2,3,4]
-  y   <- initArray [5,6,7,8]
+  dot <- mmap "0x43C00000" dotSig
+  xs  <- initArray [1,2,3,4]
+  ys  <- initArray [5,6,7,8]
   r   <- newRef
-  call dot (xs .: ys .: r)
+  call dot (xs .: ys .: r .: nil)
   res <- getRef r
   printf "sum: %d" res
 \end{code}
 
-\noindent Firstly, the software program brings our component into scope by calling the memory-mapping function, \codei{mmap}, with the physical address and signature of the component. Then, with the component in scope, we then declare the necessary arrays and references to hold our input and output values and finally call the component. The result is then read from the local reference and printed to standard output.
-
-This thesis presents a work in progress co-design language that attempts to bring functional programming to the domain of embedded systems, as well as a signal processing language. The techniques presented in this thesis are however not restricted to hardware software co-design, and can be of use for developers of embedded languages in general. The thesis consists of two parts: Part I is a general introduction to the field and puts the appended papers into context; Part II contains the appended papers.
-
-% ToDo: Limit to FPGAs.
+\noindent Firstly, the software program brings our component into scope by calling the memory-mapping function, \codei{mmap}, with the physical address and signature of the component. Then we then declare two arrays and a reference to hold the output and input values of the component. Finally, we call the component using \codei{call} with our arrays and reference as arguments. The result is then read from the reference and printed to standard output.
 
 \end{document}

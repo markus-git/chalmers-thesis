@@ -204,7 +204,7 @@ instance Interp ControlCMD IO fs where
 \section{Expressions}
 \label{expr}
 
-A language embedding based on monads gives users a representation of the statements in an imperative program, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our co-design library interprets and computes to produce a new value. As a small example, consider a function for squaring a value:
+A language embedding based on monads gives us a representation of the statements in an imperative program, but most meaningful programs also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables and operators that our co-design library interprets and computes to produce a value. As a small example, consider a function for squaring a value:
 
 \begin{code}
 square :: (Num (exp a), Type exp a) => exp a -> exp a
@@ -215,9 +215,9 @@ square a = a * a
 
 % that before as we use \codei{Type} instead of \codei{TypeM}: the former is designed to be used with expressions rather than monads.
 
-Programming with expressions in our co-design language is evidently quite similar to how its done in regular Haskell. For instance, applying the squaring function to a value of $5$ is equivalent to the mathematical expression $5*5$ which evaluates to $25$. However, the expressions used in our co-design language are deeply embedded, and as we saw in section~\ref{domain}, that means evaluation isn't the only interpretation they support. In fact, by substituting the general \codei{exp} type for either the software or hardware expression type, \codei{SExp} and \codei{HExp}, we can also compile the expression.
+Programming with expressions in our co-design language is evidently quite similar to how its done in regular Haskell. For instance, applying the squaring function to a value of $5$ is equivalent to the mathematical expression $5*5$ which evaluates to $25$. The expressions used in our co-design language are however deeply embedded, and as we saw in section~\ref{domain}, that means evaluation isn't the only interpretation they can support. In fact, by substituting the general \codei{exp} type for either the software or hardware expression type, \codei{SExp} and \codei{HExp}, expressions can be compiled as well.
 
-In simple expressions, like the above squaring function, the resulting value is usually one of various primitive types such as signed and unsigned numerical, floating point, and logical. However, in more elaborate expressions it can be a complex data type. For example, we can define an expression over a pair of values, and we can define functions over these pairs as well:
+In simple expressions, like the above squaring function, the resulting value is usually one of the various primitive types, such as signed and unsigned numerical, floating point, or logical. In more elaborate expressions it can however be a complex data type. We can, for example, define an expression that consists of a pair of values:
 
 \begin{code}
 dist :: (SExp Float, SExp Float) -> (SExp Float, SExp Float) -> SExp Float
@@ -227,55 +227,53 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. The pairs are simply syntactic suger, and no pairs will appear in the generated code.
+\noindent \codei{dist} computes the distance between two points in a plane, where points are represented as a pair of coordinates. The pairs are simply syntactic suger, and will not appear in the generated code.
 
-Expressions provide a number of abstractions that we are accustomed to as functional programmers, like let-bindings:
+In addition to the numerical and logical functions we have seen so far, expressions also provide a number of abstractions that we are accustomed to as functional programmers:
 
 \begin{code}
 class Let exp where
   share :: (Type exp a, Type exp b) => exp a -> (exp a -> exp b) -> exp b
 \end{code}
 
-\noindent Abstractions like the let-binding are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations. At the same time, abstractions can complicate the compiler and make it harder to generate efficient code. To circumvent this problem the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one with features like let-bindings that is easy to program with.
+Abstractions like the let-binding are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations. At the same time, such abstractions can complicate the compiler and make it harder to generate efficient code. To circumvent this problem, the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one with features like let-bindings that is comfortable to program with. Seeing as the feature rich expression type is an extension of the basic one, the two does inevitable share a few primitives and are therefore defined using a technique similar to Data Types \`{a} La Carte---like the instructions from section~\ref{instr}.
 
-In order to avoid having two separate instances of each interpretation for expressions, which is tedious and error-prone task, we provide an elaboration from the feature rich expressions into program snippets over the primitive expressions:
+In order to avoid having separate instances of each interpretation for the two expression types, which is a tedious and error-prone task, we provide an elaboration from the feature rich expressions into program snippets over the primitive expressions:
 
 \begin{code}
 elaborateSExp :: SExp a -> Program SIns (P2 CExp SType) (CExp a)
 \end{code}
 
-\noindent Where \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} are the primitive expressions. The program wrapping is necessary as, for instance, let-bindings are translated into references. Fortunately, programs are regular monads like any other, we can use the \codei{interpret} function to elaborate entire software programs, assuming we use \codei{elaborateSExp} to give an \codei{Interp} instance.
+\noindent Here, \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} is the primitive software expressions. The program wrapping is necessary in order to translate some expressions as, for instance, let-bindings use references to hold its shared value.
+
+\codei{elaborateSExp} provides a means to elaborate a single expression. For a full program, we need to elaborate every expression its instructions may contain. Programs are fortunately monads, and its thus possible to use the earlier \codei{interpret} function from section~\ref{instr} to elaborate entire programs---assuming we use \codei{elaborateSExp} to give an instance of \codei{Interp} for expressions. For example, a whole software program can be elaborated as:
 
 \begin{code}
 elaborateSoft :: Software a -> Program SIns (P2 CExp SType) a
 elaborateSoft = interpret
 \end{code}
 
-An evaluator for software programs can thus be defined by stringing together the elaboration of expressions with an interpreter for programs:
+\noindent Where an evaluator for software programs is then defined by combining the elaboration of expressions with an interpreter for its instructions:
 
 \begin{code}
 runSoft :: Software a -> IO a
 runSoft = interpert . elaborateSoft
 \end{code}
 
-This approach to expressions has several benefits: the translation is typed, which rules out many potential errors, and is easier to write than a complete translation into source code; the low-level expression type is reusable, and can be shared as an elaboration target between multiple high-level expression types.
+This approach to expressions and their interpretation has several benefits: the translation is typed, which rules out many potential errors; it is easier to write than a complete translation into source code; the low-level expression type is reusable and can be shared as an elaboration target between multiple high-level expression types.
 
 \section{Components}
 
-The ability to write generic programs that our co-design library means users can easily experiment with different language implementations of their functions. Most interesting heterogeneous programs does however include a mixture of software and hardware fragments, where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
+The ability to write programs that are constrained to its required functionality, rather than a specific language, means that users can easily experiment with putting their functions on different components in a system. Most interesting heterogeneous programs do however include a mixture of software and hardware fragments where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
 Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, there is no need for such features in the examples we have shown so far. The lighter interconnect offered by AXI4-lite is a better fit for our examples and will be the focus in this section.
 
-% Although burst writing of arrays is desirable they are usually small enough to not impact performance.
-
-Five channels make up the bulk of the AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These five channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and processes is a kind of function runs automatically once any of its input changes. Both signals and processes are supported by our co-design library, and the whole AXI4-lite interface is in fact implemented within the co-design library:
-
-% ---while the full AXI4 interface could certainly be implemented as well, we have yet to do so.
+Five channels make up the bulk of the AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These five channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and a process is a kind of function that runs automatically once any of its input changes. Both signals and processes are supported by our co-design language and a whole AXI4-lite interconnect is in fact implemented within the language as a function called \codei{axi4lite}. The function takes a hardware component and connects it to the read and write channels of a new interconnect:
 
 \begin{code}
 axi4lite ::
-  => Signature a
-  -> Signature (
+     Component a
+  -> Component (
           Sig (Bits 32) -- Write address.
        -> Sig (Bits 3)  -- Write channel protection type.
        -> Sig Bit       -- Write address valid.
@@ -298,30 +296,29 @@ axi4lite ::
        -> ())
 \end{code}
 
-\codei{axi4lite} accepts a hardware component and automatically connects it to an AXI4-lite interconnect, moving values between the component and the read and write channels of the interconnect. The connected component can then be loaded into a synthesis tool like Vivado~\cite{feist2012}, which results in a physical design that can be put onto, for example, the logic blocks of an FPGA.
-
-% A function called \codei{axi_ligth} takes a hardware program and hooks it up to an AXI4-lite interconnect, and the wrapped hardware component can then be compiled to VHDL and loaded into a synthesis tool like Vivado, which will turn it into a physical design that can be put onto the FPGA.
-
-With a component on the hardware we can interface with it using portmaps as usual, but with the physical address of the component in hand we can also memory-mapped I/O to access it from software. Having memory-mapped a component causes them to share address space with the memory of whatever software program they are running in. That is, a memory-mapped component can be reached from software by simply writing to and reading from pointers.
-
-% The components monitor a processors address buss and, whenever an address for component is accessed, they forward the request to the address component.
-
-The co-design library provides a function called \codei{mmap} that preforms the necessary memory-mapping when given a component and its address:
+Once the component has been wrapped it can be loaded into a synthesis tool like Vivado~\cite{feist2012} to generate a physical design that we put onto, for example, an FPGAs logic blocks. Such hardware components can interface with each other using port-maps as usual, but with the physical address of the component in hand it also possible to access it from software using memory-mapped I/O. The general idea is that memory-mapping a component causes it to share its address space with the memory of whatever software program is running, that is, a component can be reached from software by simply writing to and reading from pointers to its address. The software function \codei{mmap} preforms the necessary memory-mapping for a component:
 
 \begin{code}
-mmap :: String -> Component a -> Software (Pointer (Soften a))
+mmap :: Address -> Component a -> Software (Pointer (Soften a))
 \end{code}
 
-\noindent Note that the resulting memory pointer has ``soften'' its type, which replaces hardware types like signals with their corresponding type in software. The translation between hardware and software types is described by the type family \codei{Soften}:
+\noindent Note that the resulting memory pointer of \codei{mmap} has ``soften'' its component's original type. Softening refers to the process of replacing any hardware specific types, like signals, with their corresponding type in software, and is described by the type family \codei{Soften}:
 
 \begin{code}
 type family Soften a where
-  Soften ()           = ()
   Soften (Sig a -> b) = SRef a -> Soften b
   --dotLine
 \end{code}
 
-At this point, we have provided a means to load a hardware component onto, for instance, an FPGA's logic blocks and then have it memory-mapped into software. The remaining step is a method to call the component and get its result. In order to call the component, we must first construct a list of argument using these three functions:
+A softened pointer can then be called from software with a matching set of arguments:
+
+\begin{code}
+call :: Pointer a -> Argument a -> Software ()
+\end{code}
+
+\noindent As \codei{call} goes through the argument list writes each value marked as input to the memory pointer---different input signals are reached by simply offsetting the address---and output values are read in a similar manner. The component's output can then be read from the argument matching its output signal. As for the argument list, it is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match. A list of arguments is constructed with the following functions:
+
+% each value that's marked as an input, while those marked as outputs store the result read from the component.
 
 \begin{code}
 nil   :: Argument ()
@@ -329,42 +326,30 @@ nil   :: Argument ()
 (:>>) :: SType a => SArr a -> Argument b -> Argument (SArr a -> b)
 \end{code}
 
-\noindent Where \codei{nil} creates an empty argument list, and the two infix functions \codei{(:>)} and \codei{(:>>)} extends an argument list with a reference and an array, respectively. The argument list itself is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match.
+\noindent \codei{nil} creates an empty argument list, and the two infix functions \codei{(:>)} and \codei{(:>>)} extends an argument list with a reference and an array, respectively.
 
-Calling a component once we have our arguments is done by using \codei{call}:
-
-\begin{code}
-call :: Pointer a -> Argument a -> Software ()
-\end{code}
-
-\noindent Which goes through the argument list and writes each value that's marked as an input, while those marked as outputs store the result read from the component.
-
-As an example of offloading a function to hardware, we will revisit the dot product from section~\ref{embedded} and offload that. Recall that our sequential version of the dot product had the following type signature:
+As an example of offloading a function to hardware, we revisit the earlier dot product from section~\ref{program} and recall that it had the following type:
 
 \begin{code}
-dotSeq :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
+dot :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
   -> Program (Exp m a)
 \end{code}
 
-\noindent The above type signature is however not something we can normally inspect from within Haskell, so before the function can be hooked up to an AXI4-lite interconnect and put onto hardware we must first give a signature that can be read by other functions. Seeing as the function accepts two input arrays and produces an expression as output, we can give it the following signature:
-
-% \noindent Normally we cannot inspect the dot products type from within Haskell, so before we can hook up the function to an AXI4-lite interconnect we need to give it a type signature that we can read:
+\noindent While we as designers can read the dot-products type, other functions cannot. So, before we can hook up the dot-product to an AXI4-lite interconnect and offload it, we need to give it a type signature that can be read by other functions. Seeing as the dot-product takes two arrays as input and then produces an expression as output, we can give it the following signature:
 
 \begin{code}
-dotSig :: Signature (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
-dotSig = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dotSeq a b
+comp :: Component (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
+comp = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dot a b
 \end{code}
 
-\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the signature with a signal for the dot product's output.
+\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the type signature with a signal for the dot product's output. The wrapped \codei{dot} can be hooked up to an interconnect with \codei{axi4lite} and then be compiled, synthesized and put onto hardware.
 
-Signatures like \codei{dotSig} can be inspected by other functions from within Haskell. As a result, they can be connected to other components and hooked up to an interconnect. One such interconnect is the previously mentioned AXI4-lite interconnect, for which the co-design language provides a function called \codei{compileAXI4lite} that automatically connects a signature and outputs the resulting hardware design. Applying the compiler to our \codei{dotSig} we get a design that can be fed into a hardware synthesizers, which in turn produces a physical implementation of the dot-product that we can put onto hardware.
-
-In order to communicate with our offloaded dot-product from software we need its physical address from the synthesis tool, which is ``0x4C300000'' in our case. In addition to getting the component's address, we also need to connect to our component from software with \codei{mmap} and create the two arrays and reference that will hold the dot-products inputs and output. Having done all these steps, we can call the dot-product and read its result from the reference. A program that performs these can be written as:
+In order to communicate with our offloaded dot-product from software we need to get its physical address from the synthesis tool, which is ``0x4C300000'' in our case. With the address in hand we can now put together a small software program that call our dot-product and print its result to standard output:
 
 \begin{code}
 program :: Software ()
 program = do
-  dot <- mmap "0x4C300000" dotSig
+  dot <- mmap "0x4C300000" comp
   arr <- initArr [1 .. 3]
   brr <- initArr [3 .. 6]
   res <- newRef
@@ -372,8 +357,6 @@ program = do
   val <- getRef res
   printf "%d\n" val
 \end{code}
-
-\noindent Which will call the component and print its result to standard output.
 
 \section{Vectors}
 

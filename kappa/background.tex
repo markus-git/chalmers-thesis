@@ -141,7 +141,7 @@ Now that we have grasp of functional programming, what domain specific languages
 \section{Embedded Programming in Haskell}
 \label{embedded}
 
-As we saw in the section~\ref{functional} and~\ref{domain}, programming in a functional language like Haskell is widely different from the imperative style used in a language like C. In Haskell, users write their program as a mathematical function from its inputs to output. While in C a users would write their programs as a series of sequential steps to execute.
+As we saw in the section~\ref{functional} and~\ref{domain}, programming in a functional language like Haskell is widely different from the imperative style used in a language like C. In Haskell, users write their programs as a mathematical function from inputs to output, while in C they write them as a series of sequential steps to execute on some machine.
 
 As an example of the above differences, we'll consider a finite impulse response (FIR) filter, one of the two primary types of digital filters used in digital signal processing applications~\cite{oppenheim1989}. The mathematical definition of a FIR filter of rank $N$ is as follows:
 
@@ -225,12 +225,12 @@ firVec cs v = recurrenceI (replicate (length bs) 0) v $ \i -> dotVec cs i
 
 \noindent Where \codei{recurrenceI} takes an initial buffer, an input vector to iterate over, and a step function that produces one output at a time from the previous inputs and buffer. Recurrence functions can handle the regular feedback of a FIR filter quite well, but struggles for irregular access to earlier inputs.
 
-Locking the type of \codei{firVec} to, for example, 32-bit signed integers, we compile it to C:
+% Locking the type of \codei{firVec} to, for example, 32-bit signed integers, we compile it to C:
 
-\begin{code}
-ghci> icompile (firVec (-1...1) (1...10) :: Program (Arr Int32))
-Generated C code goes here.
-\end{code}
+% \begin{code}
+% ghci> icompile (firVec (-1...1) (1...10) :: Program (Arr Int32))
+% Generated C code goes here.
+% \end{code}
 
 While a FIR filter can be described using vectors they are typically used in digital signal processing applications, and idiomatic approach for such functions is to instead use our signal processing language.  The language is built upon the co-design language and introduces the concept of signals: possibly infinite sequences of values. Like the vector language, idiomatic signal functions are constructed compositionally using smaller functions, but signals also provide a function for introducing unit delays. As an example, we create three signal functions that represents the main components of a FIR filter:
 
@@ -258,12 +258,12 @@ firSig coeffs = sums . muls coeffs . dels 0
 
 \noindent Which is quite close to the filter's mathematical specification: the input signal is delayed to form the filter's taps, where each ``tap'' is multiplied with a coefficient and summed.
 
-Locking the type signature of \codei{firSig} to signals over 32-bit integers we compile it to C:
+% Locking the type signature of \codei{firSig} to signals over 32-bit integers we compile it to C:
 
-\begin{code}
-ghci> icompileFun (firSig [-1,0,1] :: Sig Int32 -> Sig Int32)
-Generated C code goes here.
-\end{code}
+% \begin{code}
+% ghci> icompileFun (firSig [-1,0,1] :: Sig Int32 -> Sig Int32)
+% Generated C code goes here.
+% \end{code}
 
 \section{Summary}
 
@@ -273,6 +273,6 @@ Heterogeneous systems are not without their own challenges, as the presence of m
 
 Functional languages was then introduced in section~\ref{functional} as a response to the various modularity issues with using lower-level languages like C or VHDL for heterogeneous systems. Particularly the ``glue code'' of functional languages, that is their higher-order functions, type-system, and lazy evaluation, was shown to be useful for developing reusable components. Section~\ref{domain} showed how these benefits extended to languages embedded in a functional language like Haskell.
 
-Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our co-design, vector and signal languages.
+Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our hardware software co-design, vector and signal languages. The aim is to have the co-design language serve as a convenient description of imperative program descriptions for both software and hardware, with support for compilation to C and VHDL. Both the software and hardware parts are extensible to account for any differences in the intrinsics of components, and in terms of possible interpretations. The vector and signal languages are both built upon the co-design language. The first serves as a convenient front-end for array based programs, while the other extends it with support for expressing synchronous data-flow computations.
 
 \end{document}

@@ -362,38 +362,32 @@ program = do
 
 Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays gives a designer full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
 
-A typical vector computation starts with a ``manifest'' vector, that is, a vector which refers directly to an array in memory. Vector operations are then applied, where these operations are overloaded to accept any ``pully'' vector with another ``pully'' vector as result. Then, once the various vectors have been constructed, they are assembled into a ``pushy'' vector and written to memory, resulting in a new ``manifest'' vector.
+A typical vector computation starts with a ``manifest'' vector, that is, a vector which refers directly to an array in memory. Vector operations are then applied, where each operation is overloaded to accept any ``pully'' vector as input and produces another ``pully'' vector. Then, once the various vectors have been constructed, they are assembled into a ``pushy'' vector and written to memory, resulting in a new ``manifest'' vector. The various names for ``manifest'', ``pully'' and ``pushy'' vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, the ideas of which our vectors are based on.
 
-The various names for ``manifest'', ``pully'' and ``pushy'' draw inspiration from the Pan language~\cite{} and push arrays~\cite{}, the ideas of which our vectors are based on. Manifest vectors are more often than not immutable arrays provided by the co-design language, as such arrays have an representation in memory. A Push vector on the other hand is not stored in memory, but is rather represented as a function:
+Manifest vectors are more often than not the immutable arrays provided by the co-design language, as such arrays have an representation in memory. A Push vector on the other hand is not stored in memory, but is rather represented as a function:
 
 \begin{code}
 data Pull exp a where
   Pull :: exp Length -> (exp Index -> a) -> Pull exp a
 \end{code}
 
-\noindent Where \codei{Length} and \codei{Index} are both aliases for 32-bit integers.
-
-A pull vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
-
-% A pull vector is not monadic, as it is restricted to pure expressions for computing its elements. 
+\noindent A pull vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
 
 Push vectors go in the opposite direction of pull vectors, and give us control over a vectors evaluation to the producers rather than the consumer. That is, pull vectors have a representation that supports nested writes to memory and fusion of operations. Push vectors are represented as:
-
-% This differences is reflected in the representation of pull vectors as they include monadic effects:
 
 \begin{code}
 data Push m a where
   Push :: Exp m Length -> ((Exp m Index -> a -> m ()) -> m ()) -> Push m a
 \end{code}
 
-A push vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either the co-design's two languages and have the push vector's function write each element to an array.
+\noindent A push vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is an associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either of the co-design's two languages and have the push vector's function write each element to an array. In particular, push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors.
 
-As an example, we define a function that computes the sum of the square of the numbers from one to $n$:
+As an example, consider the sum of the square of all numbers from zero to $n$:
 
 \begin{code}
 squares :: (Num a, Type exp a) => exp a -> exp a
 squares n = sum $ map (\x -> x * x) (1 ... n)
-\end{code}
+\end{code} %$
 
 \noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values from one to $n$, to which a mapping is applied that squares each element. The vector is then converted into a push vector and summed up into a single value.
 
@@ -406,17 +400,11 @@ sum :: (Pully exp vec a, Type exp a, Num a) => vec -> a
 sum = fold (+) 0
 \end{code}
 
-\noindent Where \codei{Pully} summaries the qualities a vector needs to fulfill for it to be considered ``pully''.
-
-As both pull and push vectors are represented by functions, they are't compiled to programs as per say. Rather, those vectors are turned into manifest vectors which have a direct representation in both software and hardware. This, together with the overloading of vector types, enables programs to seamlessly incorporate vectors.
-
 \section{Signal processing}
 
 \label{signals}
 
 While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time, or are simply better expressed through streaming directly rather than being converted into a function over arrays, we provide the signal language.
-
-% TODO: last sentence above is bad.
 
 The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals.
 
@@ -432,9 +420,17 @@ zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c)
   -> Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 
-\noindent \codei{repeat} creates a signal by repeating some value; \codei{map} applies a function to each value of a signal; \codei{zipWith} joins two signals element-wise using then given function. The general idea behind is that every ground type, as permitted by the expression language, is lifted to operate element-wise over signals. This can either be done by redefining standard Haskell functions, as we have done with \codei{repeat}, \codei{map} and \codei{zipWith}, or through type classes like \codei{Num}---for classes that cannot be instantiated with signals we provide a new class that mimics the original.
+\noindent \codei{repeat} creates a signal by repeating some value; \codei{map} applies a function to each value of a signal; \codei{zipWith} joins two signals element-wise using then given function. The general idea is that every ground type in the expression language is lifted to operate element-wise over signals by, for example, using the above functions or type classes like \codei{Num}:
 
-So far the functions we shown are combinatorial. Most interesting examples of signal processing does carry some form of state. For this reason, a sequential operator is also provided by the signal language:
+\begin{code}
+instance (Num (exp a), pred a) => Num (Sig exp pred a) where
+  fromInteger = repeat . fromInteger
+  (+)         = zipWith (+)
+  (-)         = zipWith (-)
+  --dotLine
+\end{code}
+
+The above signal functions are all combinatorial in the sense that their output only depends on the current inputs. Most interesting examples of signal processing does carry some form of state. A sequential operator for unit delays is therefore provided as well:
 
 \begin{code}
 delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
@@ -450,21 +446,19 @@ parity inp = out where
   out = zipWith xor (delay false out) input
 \end{code}
 
-As a larger example of feedback, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback.
-
-An IIR filter is typically described and implemented in terms of a difference equation:
+As a larger example of feedback, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
 
 \begin{equation}
 y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \: - \: \sum_{j=1}^{Q} a_{j} \cdot y_{n-j} \right)
 \end{equation}
 \vspace{1mm}
 
-\noindent Where $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and isn't part of the feedback sum.
+\noindent $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and is not part of the feedback sum.
 
-Examining the above equation we see that a IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
+Examining the above equation we can see that the IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
 
 \begin{code}
-iir :: (Fractional a, Num a, pred a) => exp a -> [exp a] -> [exp a]
+iir :: (Fractional a, Num (exp a), pred a) => exp a -> [exp a] -> [exp a]
   -> Sig exp pred a -> Sig exp pred a
 iir a0 as bs x = y
   where
@@ -473,7 +467,19 @@ iir a0 as bs x = y
     lower = fir as . delay 0
 \end{code}
 
-A circular definition of \codei{y} is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
+\noindent With the FIR filter defined as.
+
+\begin{code}
+fir :: (Fractional a, Num (exp a), pred a) => [exp a]
+  -> Sig exp pred a -> Sig exp pred a
+fir as x = P.foldr1 (+)
+         $ P.zipWith (*) (P.map repeat as)
+         $ P.iterate (delay a) x
+\end{code}
+
+\noindent Where functions prefixed by \codei{P} are Haskell's standard list function rather signal functions.
+
+A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
 
 This behavior of \codei{delay} implies that we can distinguish values that have and haven't been delayed, which is something that's normally not possible to do in Haskell---as being able to observe the sharing of \codei{y} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows us to turn signal functions like the above IIR filter, which describes a network of operations, into a directed graph. Any sharing is then visible as edges in the graph, connecting nodes over its operations.
 

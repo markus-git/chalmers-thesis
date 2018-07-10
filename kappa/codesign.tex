@@ -359,6 +359,7 @@ program = do
 \end{code}
 
 \section{Vectors}
+\label{vectors}
 
 Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays gives a designer full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
 
@@ -401,14 +402,11 @@ sum = fold (+) 0
 \end{code}
 
 \section{Signal processing}
-
 \label{signals}
 
-While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} showed that compositional descriptions can yield a better intuition of what constitutes a program. The vector language was therefore introduced and provides a comfortable syntax for composing sub-components to form larger, array based programs. For functions that involve a notion of time, or are simply better expressed through streaming directly rather than being converted into a function over arrays, we provide the signal language.
+While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} did show that a compositional description can give us a better intuition of what a program consists of. Section~\ref{vectors} addressed this deficiency as its vectors provide a comfortable syntax for composing smaller array functions to form a larger program. For functions that involve a notion of time, we have signals.
 
-The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals.
-
-Programming of signals is done compositionally, and a set of functions is provided to support the composition of new signals from existing ones. That is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals. For instance, some of the supplied combinatorial functions include:
+The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals. Programming with signals is done compositionally, that is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals:
 
 \begin{code}
 repeat :: pred a => exp a -> Sig exp pred a
@@ -420,7 +418,7 @@ zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c)
   -> Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 
-\noindent \codei{repeat} creates a signal by repeating some value; \codei{map} applies a function to each value of a signal; \codei{zipWith} joins two signals element-wise using then given function. The general idea is that every ground type in the expression language is lifted to operate element-wise over signals by, for example, using the above functions or type classes like \codei{Num}:
+These signal functions model the similarly named functions in Haskell base libraries: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell, or using vectors. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
 
 \begin{code}
 instance (Num (exp a), pred a) => Num (Sig exp pred a) where
@@ -430,15 +428,13 @@ instance (Num (exp a), pred a) => Num (Sig exp pred a) where
   --dotLine
 \end{code}
 
-The above signal functions are all combinatorial in the sense that their output only depends on the current inputs. Most interesting examples of signal processing does carry some form of state. A sequential operator for unit delays is therefore provided as well:
+All signal functions we have shown so far have been combinatorial, in the sense that their output only depends on the current inputs. Sequential functions on the other hand needs to access older values. For these, the signal language provides a unit delay:
 
 \begin{code}
 delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
 \end{code}
 
-\noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant. Note that \codei{delay} introduces the notion of a \emph{next time step}, making time enumerable.
-
-While these functions may appear innocent, \codei{repeat}, \codei{map} and \codei{zipWith} can express most combinatorial signal networks, while the combination of \codei{delay} with feedback can describe any kind of sequential signal network. For instance, we can define a parity checker as:
+\noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant---the function introduces the notion of a \emph{next time step}, making time enumerable. While \codei{delay} may appear innocent, combined with feedback it can describe any kind of sequential signal network. For example, a parity checker can be defined as:
 
 \begin{code}
 parity :: Sig exp pred Bool -> Sig exp pred Bool
@@ -446,7 +442,7 @@ parity inp = out where
   out = zipWith xor (delay false out) input
 \end{code}
 
-As a larger example of feedback, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
+As a larger example, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
 
 \begin{equation}
 y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \: - \: \sum_{j=1}^{Q} a_{j} \cdot y_{n-j} \right)
@@ -455,7 +451,7 @@ y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \:
 
 \noindent $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and is not part of the feedback sum.
 
-Examining the above equation we can see that the IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can define the filter as:
+Examining the above equation we can see that the IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can reuse the FIR filter from section~\ref{embed} and define the filter as:
 
 \begin{code}
 iir :: (Fractional a, Num (exp a), pred a) => exp a -> [exp a] -> [exp a]
@@ -467,25 +463,11 @@ iir a0 as bs x = y
     lower = fir as . delay 0
 \end{code}
 
-\noindent With the FIR filter defined as.
+A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over Haskell values, like lists, can be used to build repeating graphs structures.
 
-\begin{code}
-fir :: (Fractional a, Num (exp a), pred a) => [exp a]
-  -> Sig exp pred a -> Sig exp pred a
-fir as x = P.foldr1 (+)
-         $ P.zipWith (*) (P.map repeat as)
-         $ P.iterate (delay a) x
-\end{code}
+This behavior of \codei{delay} implies that we can distinguish values that have and haven't been delayed, which is something that's normally not possible to do in Haskell---being able to observe the sharing of \codei{y} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows us to turn signal functions like the above IIR filter into a directed graph. Any sharing is then visible as edges in the graph, connecting the nodes over its operations.
 
-\noindent Where functions prefixed by \codei{P} are Haskell's standard list function rather signal functions.
-
-A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over other Haskell values like lists can be used to build repeating graphs structures.
-
-This behavior of \codei{delay} implies that we can distinguish values that have and haven't been delayed, which is something that's normally not possible to do in Haskell---as being able to observe the sharing of \codei{y} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows us to turn signal functions like the above IIR filter, which describes a network of operations, into a directed graph. Any sharing is then visible as edges in the graph, connecting nodes over its operations.
-
-A graph representation of a signal network enables us to check for cycles, order the nodes, and, finally, compile them into programs. A regular program does however not capture the streaming nature of a signal function, as it represents an action we can run in order to produce a value. So instead of compiling to program directly, the signal language translates a signal into an co-iterative stream~\cite{caspi1998}.
-
-Co-iteration consists of associating to each stream an initial state and a transition function from old state to a pair of a value and a new state. The benefit of this approach is that it allows us to handle infinite data types, like streams, in a strict and efficient way. A slightly modified version of co-iterative streams is provided by the signal language, where state is represented implicitly by the \codei{Program} monad:
+A graph representation of a signal network enables us to check for cycles, order its nodes, and compile it. Regular programs are however a poor target for signal functions, as its type loses any notion of streaming that a function might have had. So, a signal function is instead turned into a co-iterative stream~\cite{caspi1998}, where each stream has an initial state and a transition function from its current state to an output and a new state. The benefit of this approach is that it allows for infinite data types, like streams, to be handled in a strict and efficient way. The streams themselves are however based on programs:
 
 \begin{code}
 data Stream instr exp pred a where
@@ -493,15 +475,6 @@ data Stream instr exp pred a where
     -> Stream instr exp pred a
 \end{code}
 
-\noindent The outer monad is used to initialize the stream, where the result of the initialization is another program that produces the output values.
-
-The compiler for signal functions is then given as transformation from a function over signals to a function over streams:
-
-\begin{code}
-compileF1 :: (Sig exp pred a -> Sig exp pred b)
-  -> IO (Str instr exp pred a -> Str instr exp pred b)
-\end{code}
-
-\noindent Where the \codei{IO} type is a result of observable-sharing.
+\noindent A stream's outer program is used to initialize the stream, which results in another program that in turn produces the output values and updates the state.
 
 \end{document}

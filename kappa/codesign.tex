@@ -361,7 +361,7 @@ program = do
 \section{Vectors}
 \label{vectors}
 
-Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays gives a designer full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
+Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
 
 A typical vector computation starts with a ``manifest'' vector, that is, a vector which refers directly to an array in memory. Vector operations are then applied, where each operation is overloaded to accept any ``pully'' vector as input and produces another ``pully'' vector. Then, once the various vectors have been constructed, they are assembled into a ``pushy'' vector and written to memory, resulting in a new ``manifest'' vector. The various names for ``manifest'', ``pully'' and ``pushy'' vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, the ideas of which our vectors are based on.
 
@@ -411,10 +411,12 @@ The signal language is based on the concept of signals: possibly infinite sequen
 \begin{code}
 repeat :: pred a => exp a -> Sig exp pred a
 
-map :: (pred a, pred b) => (exp a -> exp b)
+map :: (pred a, pred b)
+  => (exp a -> exp b)
   -> Sig exp pred a -> Sig exp pred b
 
-zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c)
+zipWith :: (pred a, pred b, pred c)
+  => (exp a -> exp b -> exp c)
   -> Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 

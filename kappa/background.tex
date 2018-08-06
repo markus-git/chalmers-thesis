@@ -273,6 +273,18 @@ Heterogeneous systems are not without their own challenges, as the presence of m
 
 Functional languages was then introduced in section~\ref{functional} as a response to the various modularity issues with using lower-level languages like C or VHDL for heterogeneous systems. Particularly the ``glue code'' of functional languages, that is their higher-order functions, type-system, and lazy evaluation, was shown to be useful for developing reusable components. Section~\ref{domain} showed how these benefits extended to languages embedded in a functional language like Haskell.
 
-Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our hardware software co-design, vector and signal languages. The aim is to have the co-design language serve as a convenient description of imperative program descriptions for both software and hardware, with support for compilation to C and VHDL. Both the software and hardware parts are extensible to account for any differences in the intrinsics of components, and in terms of possible interpretations. The vector and signal languages are both built upon the co-design language. The first serves as a convenient front-end for array based programs, while the other extends it with support for expressing synchronous data-flow computations.
+Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our hardware software co-design, vector and signal languages. The aim is to have the co-design language serve as a convenient description of imperative program descriptions for both software and hardware, with support for compilation to C and VHDL. Whereas the vector and signal language will serve as convenient front-ends fro the co-design language, extending it with support for array and synchronous data-flow programming, respectively.
+
+The remainder of this thesis goes over the languages in detail to highlight the various ideas they are built on. In particular, the following contributions are made:
+
+\begin{itemize}
+\item We present a language for hardware software co-design that is embedded in Haskell and designed with FPGA programming in mind. As such, the co-design language generates both C and VHDL code to describe its software and hardware components, including the necessary glue code for connections between components. Intrinsics of a component do however vary, even between components described by the same language, the software and hardware languages are thus extensible.
+
+\item We present the type-based techniques for implementing an embedded language like the co-design language. The technique is based on a monadic representation of imperative programs that is loosely coupled to its expression and predicate types, allowing each part to be developed separately. As an additional benefit, handling the sequencing of programs separately enables their interpretation to be handled separately as well.
+
+\item We present a code generation scheme for programs by a series of translations between progressively smaller languages, where each step is typed in order to safeguard against common errors found in untyped translations. This scheme allows for languages to provide users with feature-rich expressions, while still having fine control over the generated source code.
+
+\item We present two extensions to the hardware software co-design language. One extension supplements an array type with vector computations that can be defined in a compositional manner and supports fusion. While the other extension supplements an expression type with synchronous data-flow and provides its own interpreter for turning such expressions into signal processing networks.
+\end{itemize}
 
 \end{document}

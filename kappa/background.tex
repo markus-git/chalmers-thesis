@@ -197,7 +197,7 @@ dotSeq x y = do
 
 \noindent That is, a program in the co-design languages is a monad. These monads acts as a kind of composable computation descriptions, and together with Haskell's \codei{do} notation, allows for instructions to be sequenced very much like they are in C.
 
-This version of a dot product is however not without fault. As with the C version, the function is locked to values of \codei{Float}. We could however tackle this problem by making use of Haskell's \codei{Num} class, changing the function's type while leaving its body intact:
+The above dot product is however not without fault. For instance, as with the C version, it is limited to values of type \codei{Float}; a dot product can be performed over any numerical value, as long as it supports addition and multiplication. Fortunately, functions over restricted types can be generalized to accept a range of values through Haskell's type classes. For numerical values the type class \codei{Num} is used, and we change the function's type to accept any value that satisfies \codei{Num} while leaving its body unchanged:
 
 \begin{code}
 dotSeq :: Num a => Arr a -> Arr a -> Program (Exp a)
@@ -205,16 +205,33 @@ dotSeq :: Num a => Arr a -> Arr a -> Program (Exp a)
 
 The dot-product is now polymorphic in the kind of values it accepts, but limited to numerical values that supports addition and multiplication. Even with its new type, the function is quite still fragile: the for-loop's length and the array indexing are both handled manually. That is, a single typo in any of these two would break the function but not its type, creating an error that would first emerge at run-time.
 
-For purely array based computations like the dot product, the idiomatic approach would instead be to use our vector language. Where users can build larger functions from its library of smaller, pre-verified functions. A vector version can be defined as follows:
+For purely array based computations like the dot product, the idiomatic approach would instead be to use our vector language. Where users can build larger functions from its library of smaller, pre-verified functions. A dot product can be defined as follows, using functions from this vector library:
 
 \begin{code}
 dotVec :: Num a => Vec a -> Vec a -> Exp a
 dotVec xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-\noindent Here, the dot product is calculated by first joining the two vectors \codei{xs} and \codei{ys} by element-wise multiplication with \codei{zipWith}, and then reducing the resulting list with \codei{sum}.
+\noindent Here, the dot product is calculated by first joining the two vectors \codei{xs} and \codei{ys} by element-wise multiplication with \codei{zipWith}, and then reducing the resulting list with \codei{sum}. Of these two functions, \codei{zipWith} is an example of a higher-order function, like the \codei{map} function from section~\ref{functional}; the manner in which it joins the two vectors is determined by the function given as its first argument.
 
-The above version of the dot product is not only closer to its mathematical specification than the sequential one, but also sturdier in the sense that its harder for users to make an error. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+A dot product based on vectors is not only closer to its mathematical specification than its sequential version, but also sturdier in the sense that its harder for users to make an error: indices and lengths are now hidden by pre-verified vector functions. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}: say, for example, that \codei{xs} is a constant vector of ones, \codei{zipWith} is then able to replace all indexing into \codei{xs} with a constant one.
+
+As an example, we connect the dot product to a small program and compile it to C:
+
+\begin{code}
+int main() {
+  uint16_t _a0[] = {1, 2, 3, 4}, *a0 = _a0;
+  uint16_t _a1[] = {4, 3, 2, 1}, *a1 = _a1;
+  uint16_t state2 = 0;
+  uint32_t v3;
+  for (v3 = 0; v3 < 4; v3++)
+    state2 = a0[v3] * a1[v3] + state2;
+  fprintf(stdout, "result: %d\n", state2);
+  return 0;
+}
+\end{code}
+
+\noindent The software program connects our dot product to two arrays of four 16-bit usigned integers and prints its result to standard output, with imports omitted for brevity.
 
 For a full implementation of the FIR filter, the vector language is a bit outside its comfort zone. Vectors excel at describing array transformations, whereas the filter is described by a recurrence equation where output depends on previous input values. Nevertheless, the vector library does provide a few such recurrence functions, and we use one of them to implement the full filter:
 
@@ -223,16 +240,53 @@ firVec :: Num a => Vec a -> Vec a -> Program (Arr a)
 firVec cs v = recurrenceI (replicate (length bs) 0) v $ \i -> dotVec cs i
 \end{code}
 
-\noindent Where \codei{recurrenceI} takes an initial buffer, an input vector to iterate over, and a step function that produces one output at a time from the previous inputs and buffer. Recurrence functions can handle the regular feedback of a FIR filter quite well, but struggles for irregular access to earlier inputs.
+\noindent Where \codei{recurrenceI} takes an initial buffer, an input vector to iterate over, and a step function that produces one output at a time from the previous inputs and buffer. Recurrence functions can handle the regular feedback of a FIR filter quite well, but struggles for irregular access to earlier inputs. Compiling the FIR filter to C yields the following code:
 
-% Locking the type of \codei{firVec} to, for example, 32-bit signed integers, we compile it to C:
+\begin{code}
+int main() {    
+  r5 = 0;
+  for (v6 = 0; v6 <= 3; v6++) {
+    a3[r5] = a1[v6];
+    r5 = (r5 + 1) % 4;
+    state7 = 0;
+    for (v8 = 0; v8 < 4; v8++)
+      state7 = a0[v8] * a3[(4 + r5 - v8 - 1) % 4] + state7;
+    a2[v6] = state7;
+  }
+}
+\end{code}
 
-% \begin{code}
-% ghci> icompile (firVec (-1...1) (1...10) :: Program (Arr Int32))
-% Generated C code goes here.
-% \end{code}
+\noindent Imports, definitions, and code unrelated to the filter have been omitted for the sake of brevity. Note that \codei{a1} contains the input array and \codei{a0} the coefficients, both have a length of four, and array \codei{a3} is the queue used by \codei{recurrenceI} to store inputs.
 
-While a FIR filter can be described using vectors they are typically used in digital signal processing applications, and idiomatic approach for such functions is to instead use our signal processing language.  The language is built upon the co-design language and introduces the concept of signals: possibly infinite sequences of values. Like the vector language, idiomatic signal functions are constructed compositionally using smaller functions, but signals also provide a function for introducing unit delays. As an example, we create three signal functions that represents the main components of a FIR filter:
+Seeing as how all the filters inputs is present at once in the input vector, we could double down on the vector based approach and do without the queue:
+
+\begin{code}
+firQ :: Num a => Vec a -> Vec a -> Vec a
+firQ coeff = map (dot coeff . reverse) . tail . inits
+\end{code}
+
+\noindent Trading the queue, and thus any modulo operations used during indexing, for a few stub-vectors that index directly into the input vector: \codei{inits} creates a vector from each initial segment, \codei{tail} drops the first of these vectors, and \codei{reverse} does what its name implies and reverses a vector. Compilation now yields the following C code:
+
+\begin{code}
+int main() {
+  for (v3 = 0; v3 <= 3; v3++) {
+    if (4 <= v3 + 1) { b5 = 4; } else { b5 = v3 + 1; }
+    if (4 <= b5) { b4 = 4; }
+    else {
+      if (4 <= v3 + 1) { b6 = 4; } else { b6 = v3 + 1; }
+      b4 = b6;
+    }
+    state7 = 0;
+    for (v8 = 0; v8 < b4; v8++) {
+      if (4 <= v3 + 1) { b9 = 4; } else { b9 = v3 + 1; }
+      state7 = a0[v8] * a1[b9 - v8 - 1] + state7;
+    }
+    a2[v3] = state7;
+  }
+}
+\end{code}
+
+While a FIR filter can be described using vectors, they are typically used in digital signal processing applications, where inputs arrive in a stream rather than blocks, and the idiomatic approach for such functions is to instead use our signal processing language. The language is built upon the co-design language and introduces the concept of signals: possibly infinite sequences of values. Like the vector language, idiomatic signal functions are constructed compositionally using smaller functions, but signals also provide a function for introducing unit delays. As an example, we create three signal functions that represents the main components of a FIR filter:
 
 \begin{code}
 sums :: Num a => [Sig a] -> Sig a
@@ -247,23 +301,51 @@ dels e as = iterate (delay e) as
 
 \noindent That is, a summation and a multiplication with coefficients, which together form a dot product, and a number of successive delays to form the taps.
 
-We should note that \codei{foldr1}, \codei{zipWith}, \codei{map} and \codei{iterate} are the standard Haskell functions for lists. Whereas addition and multiplication are lifted to operate element-wise over signals. The other two functions, \codei{constant} and \codei{delay}, are signal functions that introduces a constant signal and a unit delay, respectively.
+We should note that \codei{foldr1}, \codei{zipWith}, \codei{map} and \codei{iterate} are the standard Haskell functions for lists, as opposed to signal functions. Whereas addition and multiplication are lifted to operate element-wise over signals. The last two functions, \codei{constant} and \codei{delay}, are however signal functions, and they introduce a constant signal and a unit delay, respectively.
 
-A full FIR filter can now be expressed as:
+A full FIR filter can now be expressed with signals as:
 
 \begin{code}
 firSig :: Num a => [Exp a] -> Sig a -> Sig a
 firSig coeffs = sums . muls coeffs . dels 0
 \end{code}
 
-\noindent Which is quite close to the filter's mathematical specification: the input signal is delayed to form the filter's taps, where each ``tap'' is multiplied with a coefficient and summed.
+\noindent Which also is quite close to the filter's mathematical specification, especially so from a hardware designers perspective: the input signal is delayed to form the filter's taps, where each ``tap'' is multiplied with a coefficient and summed. Hardware designers tend to be comfortable with this kind of box design, where each box corresponds to a function. Compiling the signal based filter to VHDL produces the following hardware design:
 
-% Locking the type signature of \codei{firSig} to signals over 32-bit integers we compile it to C:
-
-% \begin{code}
-% ghci> icompileFun (firSig [-1,0,1] :: Sig Int32 -> Sig Int32)
-% Generated C code goes here.
-% \end{code}
+\begin{code}
+ENTITY comp0 IS
+  PORT (in0 : IN unsigned (7 DOWNTO 0);
+        out1 : OUT unsigned (7 DOWNTO 0);
+        clk : IN std_logic;
+        rst : IN std_logic) ;
+END ENTITY comp0 ;
+ARCHITECTURE behav OF comp0 IS
+  SIGNAL state2 : unsigned (7 DOWNTO 0) ;
+  SIGNAL state2_d : unsigned (7 DOWNTO 0) := "00000000" ;
+BEGIN
+  l8 :
+    PROCESS (clk, in0) IS
+      VARIABLE v3, v4, v5, v6, v7 : unsigned (7 DOWNTO 0) ; 
+    BEGIN
+      IF rising_edge (clk) THEN
+        v3 := "00000001" ;
+        v4 := "00000010" ;
+        v5 := resize (v3 * ins0, 8) ;
+        v6 := resize (v4 * state2_d, 8) ;
+        v7 := resize (v5 + v6, 8) ;
+        state2 <= in0 ;
+        out1 <= v7 ;
+      END IF ;
+    END PROCESS l8 ;
+  l9 :
+    PROCESS (clk) IS
+    BEGIN
+      IF rising_edge (clk) THEN
+        state2_d <= state2 ;
+      END IF ;
+    END PROCESS l9 ;
+END ARCHITECTURE behav ;
+\end{code}
 
 \section{Summary}
 

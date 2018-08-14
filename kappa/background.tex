@@ -312,6 +312,7 @@ firSig coeffs = sums . muls coeffs . dels 0
 
 \noindent Which also is quite close to the filter's mathematical specification, especially so from a hardware designers perspective: the input signal is delayed to form the filter's taps, where each ``tap'' is multiplied with a coefficient and summed. Hardware designers tend to be comfortable with this kind of box design, where each box corresponds to a function. Compiling the signal based filter to VHDL produces the following hardware design:
 
+% TODO: Might be an error in the code, as both processes trigger on the clock.
 \begin{code}
 ENTITY comp0 IS
   PORT (in0 : IN unsigned (7 DOWNTO 0);
@@ -324,18 +325,16 @@ ARCHITECTURE behav OF comp0 IS
   SIGNAL state2_d : unsigned (7 DOWNTO 0) := "00000000" ;
 BEGIN
   l8 :
-    PROCESS (clk, in0) IS
+    PROCESS (in0) IS
       VARIABLE v3, v4, v5, v6, v7 : unsigned (7 DOWNTO 0) ; 
     BEGIN
-      IF rising_edge (clk) THEN
-        v3 := "00000001" ;
-        v4 := "00000010" ;
-        v5 := resize (v3 * ins0, 8) ;
-        v6 := resize (v4 * state2_d, 8) ;
-        v7 := resize (v5 + v6, 8) ;
-        state2 <= in0 ;
-        out1 <= v7 ;
-      END IF ;
+      v3 := "00000001" ;
+      v4 := "00000010" ;
+      v5 := resize (v3 * ins0, 8) ;
+      v6 := resize (v4 * state2_d, 8) ;
+      v7 := resize (v5 + v6, 8) ;
+      state2 <= in0 ;
+      out1 <= v7 ;
     END PROCESS l8 ;
   l9 :
     PROCESS (clk) IS
@@ -353,20 +352,20 @@ Section~\ref{intro} gave a general introduction to embedded programming and its 
 
 Heterogeneous systems are not without their own challenges, as the presence of multiple processors raises all of the issues involved with parallel, homogeneous systems. Also, the level of heterogeneity in a system can introduce additional challenges with different system capabilities and development between processors: components may support different instructions, leading to incompatibilities between the code they can execute even if they're both programmed in the same language.
 
-Functional languages was then introduced in section~\ref{functional} as a response to the various modularity issues with using lower-level languages like C or VHDL for heterogeneous systems. Particularly the ``glue code'' of functional languages, that is their higher-order functions, type-system, and lazy evaluation, was shown to be useful for developing reusable components. Section~\ref{domain} showed how these benefits extended to languages embedded in a functional language like Haskell.
+Functional languages was then introduced in section~\ref{functional} as a solution to the various modularity issues with using lower-level languages like C or VHDL for heterogeneous systems. Particularly the ``glue code'' of functional languages, that is their higher-order functions, type-system, and lazy evaluation, was shown to be useful for developing reusable components. Section~\ref{domain} showed how to embedded a language in Haskell, a functional programming language, and how these embedded languages benefit from the aforementioned benefits as well.
 
-Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our hardware software co-design, vector and signal languages. The aim is to have the co-design language serve as a convenient description of imperative program descriptions for both software and hardware, with support for compilation to C and VHDL. Whereas the vector and signal language will serve as convenient front-ends fro the co-design language, extending it with support for array and synchronous data-flow programming, respectively.
+Section~\ref{embedded} went on to introduce our current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems with our hardware software co-design, vector and signal languages. The aim is to have the co-design language serve as a convenient description of imperative program, both software and hardware, with support for compilation to C and VHDL. On the other hand, our vector and signal language will serve as convenient front-ends for the co-design language, extending it with support for array and synchronous data-flow programming, respectively.
 
 The remainder of this thesis goes over the languages in detail to highlight the various ideas they are built on. In particular, the following contributions are made:
 
 \begin{itemize}
-\item We present a language for hardware software co-design that is embedded in Haskell and designed with FPGA programming in mind. As such, the co-design language generates both C and VHDL code to describe its software and hardware components, including the necessary glue code for connections between components. Intrinsics of a component do however vary, even between components described by the same language, the software and hardware languages are thus extensible.
+\item We present a language for hardware software co-design that is embedded in Haskell and designed with FPGA programming in mind. As such, the co-design language generates both C and VHDL code to describe its software and hardware components, including the necessary glue code for connections between components. Intrinsics of a component do however vary between components, even those described by the same language. Both our software and hardware languages are therefore extensible so that they may be of use in other systems as well.
 
-\item We present the type-based techniques for implementing an embedded language like the co-design language. The technique is based on a monadic representation of imperative programs that is loosely coupled to its expression and predicate types, allowing each part to be developed separately. As an additional benefit, handling the sequencing of programs separately enables their interpretation to be handled separately as well.
+\item We present two extensions to the hardware software co-design language. One extension supplements an array type with vector computations that can be defined in a compositional manner that supports fusion. The other extension supplements an expression type with synchronous data-flow and provides its own interpreter for turning such expressions into signal processing networks. Neither extension is dependent on the co-design language and can be fitted for use in other embedded languages.
+
+\item We present the type-based techniques for implementing an embedded language like the co-design language. The technique is based on a monadic representation of imperative programs that is loosely coupled to its expression and predicate types, allowing each part to be developed separately. As an additional benefit, handling the sequencing of programs separately enables their interpretation to be handled separately as well. Programs and their interpretation are both designed with extensibility in mind.
 
 \item We present a code generation scheme for programs by a series of translations between progressively smaller languages, where each step is typed in order to safeguard against common errors found in untyped translations. This scheme allows for languages to provide users with feature-rich expressions, while still having fine control over the generated source code.
-
-\item We present two extensions to the hardware software co-design language. One extension supplements an array type with vector computations that can be defined in a compositional manner and supports fusion. While the other extension supplements an expression type with synchronous data-flow and provides its own interpreter for turning such expressions into signal processing networks.
 \end{itemize}
 
 \end{document}

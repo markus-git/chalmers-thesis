@@ -296,7 +296,17 @@ axi4lite ::
        -> ())
 \end{code}
 
-Once the component has been wrapped it can be loaded into a synthesis tool like Vivado~\cite{feist2012} to generate a physical design that we put onto, for example, an FPGAs logic blocks. Such hardware components can interface with each other using port-maps as usual, but with the physical address of the component in hand it also possible to access it from software using memory-mapped I/O. The general idea is that memory-mapping a component causes it to share its address space with the memory of whatever software program is running, that is, a component can be reached from software by simply writing to and reading from pointers to its address. The software function \codei{mmap} preforms the necessary memory-mapping for a component:
+\noindent A compiler that produces an interconnect for component is also provided:
+
+\begin{code}
+compileAXILite :: Component a -> String
+\end{code}
+
+Signal names in the compiled design follow the AXI4-lite standard naming convention, and should therefore be automatically recognizable as a AXI4-lite component by design tools. For those with tools that do not recognize the component, or if simply to add it manually, we will show how to add it in Vivado~\cite{feist2012}, under version 2015.2---the system we deploy to require this version of Vivado specifically, but generated design should work in newer versions as well.
+
+Firstly, once a project is opened there should be a ...
+
+Once the component has been wrapped it can be loaded into a synthesis tool like Vivado to generate a physical design that we put onto, for example, an FPGAs logic blocks. Such hardware components can interface with each other using port-maps as usual, but with the physical address of the component in hand it also possible to access it from software using memory-mapped I/O. The general idea is that memory-mapping a component causes it to share its address space with the memory of whatever software program is running, that is, a component can be reached from software by simply writing to and reading from pointers to its address. The software function \codei{mmap} preforms the necessary memory-mapping for a component:
 
 \begin{code}
 mmap :: Address -> Component a -> Software (Pointer (Soften a))

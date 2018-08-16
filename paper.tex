@@ -67,7 +67,7 @@
 % \division{Division of Solid Mechanics}
 \reportno{2011:01}
 % \ISBN{123-21332-13423-123} % Only for doctorate
-\copyrightyear{2011}
+\copyrightyear{2018}
 
 \opponent{
 Dr.~Alban\\
@@ -84,18 +84,14 @@ Nigeria
 \covercaption{Some explanation}
 
 \firstabstract{
-Developing software for embedded systems, in most cases, presents quite the challenge. Not only do they require good knowledge of the targeted hardware, but they are also designed with a very specific task in mind. That is, an embedded system is typically build with the most cost-effective hardware that meets its performance requirements. Developers must therefore ensure they take full advantage of the custom hardware while keeping their computations efficient. Furthermore, designers must often consider several other, non-functional properties, including: software partitioning, a computation should run on the component that best suits it; and memory layout, since resource constraints can be just as limiting as performance.
+Developing software for embedded systems presents quite the challenge; not only does embedded system demand good knowledge of the hardware they run on, but also demand efficiency under tight resource constraints. Modern embedded systems gain their performance from combining several kinds of co-processors, where each processor provides specialized processing capabilities to handle a particular task. Their efficiency does however come at a cost of increased complexity: co-processor specific code is interleaved with regular software code and hardware for the communication between co-processors.
 
-Modern embedded systems often gain their performance from combining several kinds of co-processors, where each processor provides specialized processing capabilities to handle a particular task. Their efficiency does however come at a cost of increased complexity: co-processor specific code is interleaved with regular software code and hardware for the communication between co-processors. As a result, and considering the aforementioned design decisions, embedded systems can be quite difficult to program. Especially so considering that most embedded systems are programmed in low-level languages, like C or even assembler, which severely limits the portability of code.
+In this thesis we explore a functional approach to embedded systems development through our hardware software co-design language and its associated vector and signal processing libraries. We argue that a functional approach can address many of the modularity problems of embedded system development, which are typically programmed in low-level languages. Particularly the glue code that functional languages offer, through its higher-order functions and lazy evaluation, enables us to build useful combinators. These features makes it easy to explore software and hardware designs in a way that traditional languages would have found difficult.
 
-In this thesis we explore a functional approach to embedded systems development through or co-design language and its associated vector and signal processing languages. The functional approach allows for computations to be passed around as first-class objects and assembled in a modular wary into a larger applications. Also, thanks to the powerful type-systems of functional languages, these computations depend on specific operations rather than an entire language, which alleviates design exploration.
-
-A functional approach to embedded systems development does address many of the modularity problems with using low-level languages, those languages are mainly used for their fine control over a system's capabilities. The languages we present in this thesis are therefore staged in order to give the designer explicit control over a large portion of the generated code.
+Low-level languages are mainly considered for embedded system due to the fine control they give over a system's capabilities, whereas functional languages are typically unaware of any resource constraints they operate under. We therefore consider explicit memory control and a staged compilation scheme for our functional languages, that is, a series of translations between progressively smaller languages, with the aim of giving designers better control over the generated source code.
 }
 
 \keywords{functional programming, domain specific languages, signal processing, code generation}
-
-% \dedication{\textit{to my dearest}}
 
 \acknowledgements{
 To my dearest, my fianc\'ee Emma Bogren: because I owe it all to you.
@@ -104,7 +100,7 @@ My constant cheerleaders, that is, my parents Dag and Lena: I am forever gratefu
 
 A very special gratitude goes out to my advisor Mary Sheeran, for your continuous help and support in my studies, for your never ending patience, guidance and immense knowledge. With a special mention to my former co-worker Emil Axelsson, without your precious support I would not have been able to conduct my research. I will always miss our interesting and long-lasting chats.
 
-I am also grateful to Anders Persson, Josef Svenningsson and Koen Claesson for their unfailing support and assistance. Your hard work, ideas and insights in the Feldspar project has proved a great source of inspiration in my research. Finally I express my gratitude to all my other colleagues at Chalmers, who make this a fantastic place to work.
+I am also grateful to Anders Persson, Josef Svenningsson and Koen Claesson for their unfailing support and assistance. Your hard work, ideas and insights in the Feldspar project have proved a great source of inspiration in my research. Finally I express my gratitude to all my other colleagues at Chalmers, who make this a fantastic place to work.
 
 Thank you all for your encouragement!
 }

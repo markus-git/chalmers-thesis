@@ -296,17 +296,51 @@ axi4lite ::
        -> ())
 \end{code}
 
-\noindent A compiler that produces an interconnect for component is also provided:
+\noindent Or if we're only interested in a design of the interconnect:
 
 \begin{code}
 compileAXILite :: Component a -> String
 \end{code}
 
-Signal names in the compiled design follow the AXI4-lite standard naming convention, and should therefore be automatically recognizable as a AXI4-lite component by design tools. For those with tools that do not recognize the component, or if simply to add it manually, we will show how to add it in Vivado~\cite{feist2012}, under version 2015.2---the system we deploy to require this version of Vivado specifically, but generated design should work in newer versions as well.
+\noindent Signal names in the generated interconnect all follow the AXI4-lite standard, and should as such be automatically recognized by most synthesizers as a AXI4 component. We show how to synthesize the design manually with the 2015.2 version of Vivado~\cite{feist2012}---the hardware project we're using for our target system requires this specific version. The actual design we're putting onto the FPGA is not important at this point, as the steps outlined below are the same for all designs. 
 
-Firstly, once a project is opened there should be a ...
+Firstly, we create a project for the AXI4 component, and we will use Vivado's tools to give us a template to start from. In particular, we use the ``Create and Package IP'' option under ``Tools'' to launch the creation wizard for a new AXI4 peripheral. Witch we then use to create a AXI4-lite slave, add it to our catalog of IP, and open a editing session for it. Two design files should now exist in our Vivado editor, as show in Figure~\ref{fig:files}.
 
-Once the component has been wrapped it can be loaded into a synthesis tool like Vivado to generate a physical design that we put onto, for example, an FPGAs logic blocks. Such hardware components can interface with each other using port-maps as usual, but with the physical address of the component in hand it also possible to access it from software using memory-mapped I/O. The general idea is that memory-mapping a component causes it to share its address space with the memory of whatever software program is running, that is, a component can be reached from software by simply writing to and reading from pointers to its address. The software function \codei{mmap} preforms the necessary memory-mapping for a component:
+\begin{figure}[t]
+\includegraphics[width=0.4\textwidth]{figures/DesignFiles}
+\centering
+\caption{Design files generated for a AXI4 peripheral.}
+\label{fig:files}
+\end{figure}
+
+The first file, which is called \codei{co_ip_v1_0} in our example, contains a shell for calling an AXI4-lite slave, and any other we might want to add to the same address space. The second file, called \codei{co_ip_v1_0_S00_AXI_inst}, contains an empty AXI4-lite slave. Its this second file that we substitute with our own design. Note that, after updating the second design, we need to make sure any references from the other design is updated as well. Once that’s done the project can be reviewed and packaged---the review will probably complain that an address port has changed in size, as we always use the full 32 bits rather than a subset, so go ahead and update its size accordingly.
+
+With our AXI4-lite peripheral saved and packaged, we open up the main project. The system we target is one based on the Zynq board and contains two embedded ARM cores, an FPGA, and possibly a few other accelerators and co-processors, we are however only interested in the first two for now. The block design of our system is given by Figure~\ref{fig:zynq}.
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/Zynq}
+\centering
+\caption{Base Zynq project.}
+\label{fig:zynq}
+\end{figure}
+
+Loading our AXI4-lite peripheral into the main project is straightforward: under the ``IP Settings'' menu, we have the option to locate our newly created project and add it as a repository, from which we can then add its AXI4-lite slave component as an ``IP'' to our main project. With the component added, Vivado can hook it up to our main system automatically through its ``Run Connection Automation'' tool. Finally, we generate a bitstream to put onto the FPGA and get its physical address from the ``Address Editor''. The block design final block design is given by Figure~\ref{fig:system}, and its implementation is given by Figure~\ref{fig:design}.
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/ZynqSystem}
+\centering
+\caption{Zynq project with AXI4-lite peripheral.}
+\label{fig:system}
+\end{figure}
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/ZynqDesign}
+\centering
+\caption{Implementation of the project.}
+\label{fig:design}
+\end{figure}
+
+Hardware components on the FPGA can interface with each other using port-maps as usual, but with the physical address of a component, it is also possible to access it from software with memory-mapped I/O. The general idea is that memory-mapping a component causes it to share its address space with the memory of whatever software program is running, that is, a component can be reached from software by simply writing to and reading from pointers to its address. The software function \codei{mmap} preforms the necessary memory-mapping for a component:
 
 \begin{code}
 mmap :: Address -> Component a -> Software (Pointer (Soften a))
@@ -327,8 +361,6 @@ call :: Pointer a -> Argument a -> Software ()
 \end{code}
 
 \noindent As \codei{call} goes through the argument list writes each value marked as input to the memory pointer---different input signals are reached by simply offsetting the address---and output values are read in a similar manner. The component's output can then be read from the argument matching its output signal. As for the argument list, it is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match. A list of arguments is constructed with the following functions:
-
-% each value that's marked as an input, while those marked as outputs store the result read from the component.
 
 \begin{code}
 nil   :: Argument ()

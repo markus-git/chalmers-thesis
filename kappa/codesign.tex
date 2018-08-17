@@ -348,7 +348,7 @@ Hardware components on the FPGA can interface with each other using port-maps as
 mmap :: Address -> Component a -> Software (Pointer (Soften a))
 \end{code}
 
-\noindent Note that the resulting memory pointer of \codei{mmap} has ``soften'' its component's original type. Softening refers to the process of replacing any hardware specific types, like signals, with their corresponding type in software, and is described by the type family \codei{Soften}:
+\noindent Note that the resulting memory pointer of \codei{mmap} has ``softened'' its component's original type. Softening refers to the process of replacing any hardware specific types, like signals, with their corresponding type in software, and is described by the type family \codei{Soften}:
 
 \begin{code}
 type family Soften a where
@@ -362,7 +362,7 @@ A softened pointer can then be called from software with a matching set of argum
 call :: Pointer a -> Argument a -> Software ()
 \end{code}
 
-\noindent As \codei{call} goes through the argument list writes each value marked as input to the memory pointer---different input signals are reached by simply offsetting the address---and output values are read in a similar manner. The component's output can then be read from the argument matching its output signal. As for the argument list, it is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match. A list of arguments is constructed with the following functions:
+\noindent As \codei{call} goes through the argument list, it writes each value marked as input to the memory pointer---different input signals are reached by simply offsetting the address---and output values are read in a similar manner. The component's output can then be read from the argument matching its output signal. As for the argument list, it is a typed heterogeneous list that ensures we use the expected number of arguments and that all intermediate types match. A list of arguments is constructed with the following functions:
 
 \begin{code}
 nil   :: Argument ()
@@ -379,14 +379,14 @@ dot :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a
   -> Program (Exp m a)
 \end{code}
 
-\noindent While we as designers can read the dot-products type, other functions cannot. So, before we can hook up the dot-product to an AXI4-lite interconnect and offload it, we need to give it a type signature that can be read by other functions. Seeing as the dot-product takes two arrays as input and then produces an expression as output, we can give it the following signature:
+\noindent While we as designers can read the type of the dot product, other functions cannot. So, before we can hook up the dot-product to an AXI4-lite interconnect and offload it, we need to give it a type signature that can be read by other functions. Seeing as the dot-product takes two arrays as input and then produces an expression as output, we can give it the following signature:
 
 \begin{code}
 comp :: Component (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
 comp = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dot a b
 \end{code}
 
-\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the type signature with a signal for the dot product's output. The wrapped \codei{dot} can be hooked up to an interconnect with \codei{axi4lite} and then be compiled, synthesized and put onto hardware.
+\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the type signature with a signal for the dot product's output---the name eludes to a combinatorial return value, rather than it returning a value for the C language. The wrapped \codei{dot} can be hooked up to an interconnect with \codei{axi4lite} and then be compiled, synthesized and put onto hardware.
 
 In order to communicate with our offloaded dot-product from software we need to get its physical address from the synthesis tool, which is ``0x4C300000'' in our case. With the address in hand we can now put together a small software program that call our dot-product and print its result to standard output:
 
@@ -405,27 +405,27 @@ program = do
 \section{Vectors}
 \label{vectors}
 
-Sequential programs in the co-design language makes use of its array type to express array and vector computations with mutable updates. These arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
+A Sequential program in the co-design language makes use of its array type to express array and vector computations with mutable updates. Arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
 
-A typical vector computation starts with a ``manifest'' vector, that is, a vector which refers directly to an array in memory. Vector operations are then applied, where each operation is overloaded to accept any ``pully'' vector as input and produces another ``pully'' vector. Then, once the various vectors have been constructed, they are assembled into a ``pushy'' vector and written to memory, resulting in a new ``manifest'' vector. The various names for ``manifest'', ``pully'' and ``pushy'' vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, the ideas of which our vectors are based on.
+A typical vector computation starts with a \textit{manifest} vector, that is, a vector that refers directly to an array in memory. Vector operations are then applied, where each operation is overloaded to accept any \textit{pully} vector as input and produces another pully vector. Then, once the various vectors have been constructed, they are assembled into a \textit{pushy} vector and written to memory, resulting in a new manifest vector. The various names for manifest, pully and pushy vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, the ideas which our vectors are based on.
 
-Manifest vectors are more often than not the immutable arrays provided by the co-design language, as such arrays have an representation in memory. A Push vector on the other hand is not stored in memory, but is rather represented as a function:
+Manifest vectors are more often than not the immutable arrays provided by the co-design language, as such arrays have an representation in memory. A \codei{Pull} vector on the other hand is not stored in memory, but is rather represented as a function:
 
 \begin{code}
 data Pull exp a where
   Pull :: exp Length -> (exp Index -> a) -> Pull exp a
 \end{code}
 
-\noindent A pull vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
+\noindent A pully vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
 
-Push vectors go in the opposite direction of pull vectors, and give us control over a vectors evaluation to the producers rather than the consumer. That is, pull vectors have a representation that supports nested writes to memory and fusion of operations. Push vectors are represented as:
+Pushy vectors go in the opposite direction of pull vectors, and gives us control over a vectors evaluation to the producers rather than the consumer. That is, pushy vectors have a representation that supports nested writes to memory and fusion of operations. A \codei{Push} vector is represented as:
 
 \begin{code}
 data Push m a where
   Push :: Exp m Length -> ((Exp m Index -> a -> m ()) -> m ()) -> Push m a
 \end{code}
 
-\noindent A push vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is an associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either of the co-design's two languages and have the push vector's function write each element to an array. In particular, push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors.
+\noindent A pushy vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is an associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either of the co-design's two languages and have the push vector's function write each element to an array. In particular, push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors.
 
 As an example, consider the sum of the square of all numbers from zero to $n$:
 

@@ -244,7 +244,7 @@ int main() {
 }
 \end{code}
 
-\noindent The software program connects our dot product to two arrays of four 16-bit unsigned integers and prints its result to standard output. Imports are omitted for brevity.
+\noindent The software program connects our dot product to two arrays of four unsigned integers and prints its result to standard output. Imports are omitted for brevity.
 
 For a full implementation of the FIR filter, the vector language is a bit outside its comfort zone. Vectors excel at describing array transformations, whereas the filter is described by a recurrence equation where output depends on previous input values. Nevertheless, the vector library does provide a few such recurrence functions, and we use one of them to implement the full filter:
 

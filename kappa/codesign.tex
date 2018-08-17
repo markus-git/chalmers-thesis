@@ -20,7 +20,7 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of a FIR filter, one with vectors and one with signals. For the kind of heterogeneous computing our co-design language aims to describe, the simplified types we have shown so far are not enough. Heterogeneous systems typically see hardware code interleaved with software code, and our language therefore needs to be able to describe both. To facilitate design exploration we also need to support descriptions that are not restricted to either language, but rather the operations they require.
+In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of an FIR filter, one with vectors and one with signals. For the kind of heterogeneous computing our co-design language aims to describe, the simplified types we have shown so far are not enough. Heterogeneous systems typically see hardware code interleaved with software code, and our language therefore needs to be able to describe both. To facilitate design exploration we also need to support descriptions that are not restricted to either language, but rather the operations they require.
 
 C and its dialects are perhaps the most commonly used languages for writing software in embedded systems. The co-design language is no different and compiles its software programs to C as well. For hardware descriptions, we use the VHDL language. This decision is purely based on the fact it is the hardware description language we are most comfortable with. Neither choice of language is final, and the language does support the addition of new target languages. Furthermore, both software and hardware are extensible and can be adapted to describe a multitude of embedded systems.
 
@@ -29,7 +29,7 @@ Starting with a single Haskell program, our co-design library is designed with t
 \section{Hardware Software Programs}
 \label{program}
 
-While C and VHDL are different from one another in that one describes software code and the other hardware designs. Nevertheless, both languages use an imperative style of programming. The co-design language is therefore built on a deep embedding of monads, as a representation of imperative programs. Monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
+C and VHDL are different from one another in that one describes software code and the other hardware designs, although both languages use an imperative style of programming. The co-design language is therefore built on a deep embedding of monads as a representation of imperative programs---remember that monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
 
 The general idea behind a monadic embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example of these similarities, consider a software program for reversing an array:
 
@@ -45,7 +45,7 @@ reverseS arr =
     len = length arr
 \end{code}
 
-The implementation of \codei{reverseS} certainly has the look and feel of a imperative program, sans a few syntactical differences. Its type signature tells us that it takes an array over 32-bit integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type is empty since the array is reversed in place.
+The implementation of \codei{reverseS} certainly has the look and feel of a imperative program, sans a few syntactical differences. Its type signature tells us that it takes an array over signed integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type is empty since the array is reversed in place.
 
 While the type of \codei{reverseS} is that of a software program, there's nothing software specific about its implementation. For-loops and arrays are both part of most imperative languages, including C and VHDL. We could just as well have implemented reverse as a hardware function. In fact, we can define the hardware version by simply changing the previous function's type signature while keeping its body intact:
 
@@ -61,7 +61,7 @@ reverseH arr =
     len = length arr
 \end{code}
 
-The similarities between \codei{reverseS} and \codei{reverseH} hints that a software or hardware type for reverse is unnecessarily restrictive. A function type that is not limited to either language, but rather the functionality it requires, can be expressed in the co-design language thanks to type classes it provides. These classes are used to ensure a type provides the functionality a program requires, like \codei{Num} did for the numerical expressions in section~\ref{embedded}. That is, we can replace the software and hardware types with a generic program type and then add constraints for any functionality we require.
+The similarity between \codei{reverseS} and \codei{reverseH} hint that a software or hardware type for reverse is unnecessarily restrictive. A function type that is not limited to either language, but rather the functionality it requires, can be expressed in the co-design language thanks to type classes it provides. These classes are used to ensure a type provides the functionality a program requires, like \codei{Num} did for the numerical expressions in section~\ref{embedded}. That is, we can replace the software and hardware types with a generic program type and then add constraints for any functionality we require.
 
 Going back to our reverse example, we can give it the following generic type:
 
@@ -70,9 +70,9 @@ reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
         => Arr m Int32 -> m ()
 \end{code}
 
-\noindent \codei{SArr} and \codei{HArr} are substituted for the generic array type \codei{Arr}, which is parameterized on the monad \codei{m}. Such an associated type for arrays lets us talk about the array type of \codei{m}; \codei{Arr} will turn into either \codei{SArr} or \codei{HArr} when \codei{m} is picked to be their respective monad.
+\noindent \codei{SArr} and \codei{HArr} are substituted for the generic array type \codei{Arr}, which is parameterized on the monad \codei{m}. Such an associated type for arrays lets us talk about the array type of \codei{m}; \codei{Arr} will turn into either \codei{SArr} or \codei{HArr} when \codei{m} is instantiated as the software or hardware monad.
 
-Three new constraints were introduced for the generic reverse, namely \codei{Arrays}, \codei{Control}, and \codei{TypeM}. The first two ensure that \codei{m} supports arrays and for-loops, whereas the third one states that 32-bit integers is a valid type in \codei{m}. \codei{Arrays} and \codei{Control} are defined as follows:
+Three new constraints were introduced for the generic reverse, namely \codei{Arrays}, \codei{Control}, and \codei{TypeM}. The first two ensure that \codei{m} supports arrays and for-loops, whereas the third one states that signed integers is a valid type in \codei{m}. \codei{Arrays} and \codei{Control} are defined as follows:
 
 \begin{code}
 class Monad m => Arrays m where
@@ -86,20 +86,20 @@ class Monad m => Control m where
       -> m ()
 \end{code}
 
-\noindent Each class lists the functions they provide and in the case of arrays, the type to use with them; \codei{Exp} represents the expression type associated with \codei{m}. Seeing as these operations are quite common, we give a short-hand for a collection of them plus references:
+\noindent Each class lists the functions it provides and in the case of arrays, the type to use with them; \codei{Exp} represents the expression type associated with \codei{m}. Seeing as these operations are quite common, we give a short-hand for a collection of them plus references:
 
 \begin{code}
 type MonadComp m = (Monad m, References m, Arrays m, Control m)
 \end{code}
 
-Just as there's classes of operations both software and hardware support, there's also operations that some languages support but others do not. The type classes therefore form a hierarchy. Monads form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads. For example, processes in hardware are given by the following type class:
+Just as there are classes of operations, that both software and hardware support, there are also operations that some languages support but others do not. The type classes therefore form a hierarchy. Monads form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads. For example, processes in hardware are given by the following type class:
 
 \begin{code}
 class HardwareMonad m => Process m where
   process :: m () -> m ()
 \end{code}
 
-At this point we should note that types introduces in this section are slightly different from those found in section~\ref{embedded}. For instance, the array type now has an extra parameter \codei{m}. The earlier types are in fact synonyms for the software types introduced in this section, and served to give a simplified introduction to the co-design language. We reimplement the dot-product using the new types as a comparison to the old:
+At this point we should note that types introduced in this section are slightly different from those found in section~\ref{embedded}. For instance, the array type now has an extra parameter \codei{m}. The earlier types are in fact synonyms for the software types introduced in this section, and served to give a simplified introduction to the co-design language. We reimplement the dot-product using the new types as a comparison to the old:
 
 \begin{code}
 dot :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a -> m (Exp m a)
@@ -114,31 +114,33 @@ dot x y = do
 
 \noindent The function's type has changed, as expected, but its body remains the same as before.
 
-As an example of a larger function, we also implement the full FIR filter. The filter itself is fairly straightforward: inputs are shifted onto the taps one by one and for each input the current impulse response is calculated using a dot-product:
+The programs we have show in this section are simply a convenient model of imperative programs and, from a users perspective, can be rather clunky. Nevertheless, they are easy to compile down to source code, and the next section goes into their representation and interpretation in detail. Later chapters show how programs is also a convenient translation target for vector computations and signal processing networks.
 
-\begin{code}
-fir :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a -> m (Arr m a)
-fir bs xs = do
-  taps <- newArr (length bs)
-  ys   <- newArr (length xs)
-  for 0 (length bs) $ \ix -> setArr taps ix 0
-  for 0 (length xs) $ \ix -> do
-    for 1 (length bs) $ \jx -> do
-      tmp <- getArr taps (jx - 1)
-      setArr taps jx tmp
-    x <- getArr xs ix
-    setArr taps 0 x
-    o <- dot bs taps
-    setArr ys ix o
-  return ys
-\end{code}
+% As an example of a larger function, we also implement the full FIR filter. The filter itself is fairly straightforward: inputs are shifted onto the taps one by one and for each input the current impulse response is calculated using a dot-product:
 
-While the above implementation is suitable for a software, it is perhaps not ideal as a hardware design. Signal processing in C is often done with arrays over chunks of the input, while a hardware is build around signals and processes to drive a continuous filter. Assuming a hardware description is our goal, the necessary change is however quite small: we swap the input and output arrays for signals and change the outer for-loop into a process. Rewriting programs at this scale is a kind of optimization we think developers are comfortable with.
+%\begin{code}
+%fir :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a -> m (Arr m a)
+%fir bs xs = do
+%  taps <- newArr (length bs)
+%  ys   <- newArr (length xs)
+%  for 0 (length bs) $ \ix -> setArr taps ix 0
+%  for 0 (length xs) $ \ix -> do
+%    for 1 (length bs) $ \jx -> do
+%      tmp <- getArr taps (jx - 1)
+%      setArr taps jx tmp
+%    x <- getArr xs ix
+%    setArr taps 0 x
+%    o <- dot bs taps
+%    setArr ys ix o
+%  return ys
+%\end{code}
+
+% While the above implementation is suitable for a software, it is perhaps not ideal as a hardware design. Signal processing in C is often done with arrays over chunks of the input, while a hardware is build around signals and processes to drive a continuous filter. Assuming a hardware description is our goal, the necessary change is however quite small: we swap the input and output arrays for signals and change the outer for-loop into a process. Rewriting programs at this scale is a kind of optimization we think developers are comfortable with.
 
 \section{Instructions}
 \label{instr}
 
-The co-design language is inspired by the work of Björn and Benny~\cite{BjornBenny} and by the Operational Monad~\cite{Operational} and is as such based on a monadic representation of imperative programs. Like our inspiration, the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. Unlike previous work, we also take into account the fact that different languages will support different expressions, types, etc. Some might even share, for instance, a sub-set of each others instructions but include a few of their own primitives---we rather not copy an entire language just to add a new primitive. We have thus taken extra care to make sure instructions, and to some extent the expressions, can be defined compositionally. The program type is therefore parameterized on its instructions, as before, but also includes a type-level list for the other types associated with the language:
+The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational} and is as such based on a monadic representation of imperative programs. Like our inspiration, the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. Unlike previous work, we also take into account the fact that different languages will support different expressions, types, etc. Some might even share a sub-set of each others instructions but include a few of their own primitives---we would rather not copy an entire language just to add a new primitive. We have thus taken extra care to make sure instructions, and to some extent the expressions, can be defined compositionally. The program type is therefore parameterized on its instructions, as before, but also includes a type-level list for the other types associated with the language:
 
 \begin{code}
 data Program instr fs a
@@ -150,25 +152,25 @@ The general idea behind the program type is that it allows for instructions to b
 interpret :: (Interp i m fs, HFunctor i, Monad m) => Program i fs a -> m a
 \end{code}
 
-\codei{interpret} lifts a monadic interpretation of instructions, which may be of varying types, to a monadic interpretation of the whole program. By using different types for the monad \codei{m}, its possible to implement different ``back ends'' for programs. For example, interpretation in Haskell's \codei{IO} monad gives a way to \emph{run programs}, while interpretation in a code generation monad can be used to make a \emph{compiler}. The interpretation of an instruction set \codei{instr} to the monad \codei{m} is given by \codei{Interp}:
+\codei{interpret} lifts a monadic interpretation of instructions, which may be of varying types, to a monadic interpretation of the whole program. By using different types for the monad \codei{m}, it is possible to implement different ``back ends'' for programs. For example, interpretation in Haskell's \codei{IO} monad gives a way to \emph{run programs}, while interpretation in a code generation monad can be used to make a \emph{compiler}. The interpretation of an instruction set \codei{instr} to the monad \codei{m} is given by \codei{Interp}:
 
 \begin{code}
 class Interp instr m fs where
   interp :: instr (P2 m fs) a -> m a
 \end{code}
 
-\noindent Where \codei{P2} is a synonym for a parameter list of two elements, here \codei{m} and \codei{fs}. Note also that \codei{interpret} also require that its instructions are higher-order functors:
+\noindent where \codei{P2} is a synonym for a parameter list of two elements, here \codei{m} and \codei{fs}. Note also that \codei{interpret} also require that its instructions are higher-order functors:
 
 \begin{code}
 class HFunctor h where
   hfmap :: (forall b . f b -> g b) -> h (P2 f fs) a -> h (P2 g fs) a
 \end{code}
 
-Higher-order instructions, parameterized on the program they are part of, makes it possible to define instruction sets compositionally using, for instance, a technique like Data Types \`{a} La Carte~\cite{DTC}. Extensible instructions sets are particularly useful for our co-design language, as any existing hardware and software instructions can be reused for new systems; we only need to add support for new intrinsic instructions and expressions. That is, to extend either the hardware or software language we only need to add a data type of our new primitive, define a new set of instructions that includes it, and add support for its interpretation. 
+Higher-order instructions, parameterized on the program they are part of, makes it possible to define instruction sets compositionally using, for instance, a technique like Data Types \`{a} La Carte~\cite{DTC}. Extensible instructions sets are particularly useful for our co-design language, as any existing hardware and software instructions can be reused for new systems; we only need to add support for new intrinsic instructions and expressions. That is, to extend either the hardware or software language, we only need to add a data type of our new primitive, define a new set of instructions that includes it, and add support for its interpretation. 
 
 % In the original Operational Monad this could be only done for simple instructions, but with our new program type it can be done even for \emph{control instructions}---instructions that take programs as arguments.
 
-As an example of how an new instruction can be defined, we introduce the \codei{If} construct:
+As an example of how a new instruction can be defined, we introduce the \codei{If} construct:
 
 \begin{code}
 data ControlCMD fs a where
@@ -177,7 +179,7 @@ data ControlCMD fs a where
 
 \noindent The type parameter \codei{prog} refers to sub-programs, \codei{exp} refers to pure expressions, and \codei{pred} refers to type predicates. Although \codei{pred} is not used in the definition of \codei{If}, it is used by other instructions and therefore included here to keep the parameter lists consistent. \codei{P3} is a synonym for a parameter list of three arguments.
 
-Assuming we have access to a few other instructions like \codei{If}, we can now define a program type that combine several instructions in a Data Types \`{a} La Carte fashion:
+Assuming we have access to a few other instructions like \codei{If}, we can now define a program type that combines several instructions in a Data Types \`{a} La Carte fashion:
 
 \begin{code}
 type MyProgram exp pred = Program (If :+: Reference :+: ...) (P2 exp pred)
@@ -185,7 +187,7 @@ type MyProgram exp pred = Program (If :+: Reference :+: ...) (P2 exp pred)
 
 \noindent The recursive program type will then set the type of sub-programs in \codei{If} to \codei{MyProgram}.
 
-The final step to our extension is to add support for interpreting \codei{MyProgram}, that is, we must define an instances for \codei{Interp} and \codei{HFunctor}. Fortunately, both classes distribute over \codei{(:+:)}, so we only need define instances for \codei{If}. The \codei{HFunctor} instance is defined as:
+The final step to our extension is to add support for interpreting \codei{MyProgram}, that is, we must define an instances for \codei{Interp} and \codei{HFunctor}. Fortunately, both classes distribute over \codei{(:+:)}, so we need only define instances for \codei{If}. The \codei{HFunctor} instance is defined as:
 
 \begin{code}
 instance HFunctor ControlCMD where
@@ -199,7 +201,7 @@ instance Interp ControlCMD IO fs where
   interp (If b tru fls) = if evalExp b then tru else fls
 \end{code}
 
-\noindent Where \codei{evalExp} is an evaluator for the expression language.
+\noindent where \codei{evalExp} is an evaluator for the expression language.
 
 \section{Expressions}
 \label{expr}
@@ -246,29 +248,29 @@ elaborateSExp :: SExp a -> Program SIns (P2 CExp SType) (CExp a)
 
 \noindent Here, \codei{SIns} and \codei{SType} are the software instruction set and type predicate, and \codei{CExp} is the primitive software expressions. The program wrapping is necessary in order to translate some expressions as, for instance, let-bindings use references to hold its shared value.
 
-\codei{elaborateSExp} provides a means to elaborate a single expression. For a full program, we need to elaborate every expression its instructions may contain. Programs are fortunately monads, and its thus possible to use the earlier \codei{interpret} function from section~\ref{instr} to elaborate entire programs---assuming we use \codei{elaborateSExp} to give an instance of \codei{Interp} for expressions. For example, a whole software program can be elaborated as:
+\codei{elaborateSExp} provides a means to elaborate a single expression. For a full program, we need to elaborate every expression an instruction contains. Programs are fortunately monads, and its thus possible to use the earlier \codei{interpret} function from section~\ref{instr} to elaborate entire programs---assuming we use \codei{elaborateSExp} to give an instance of \codei{Interp} for expressions. For example, a whole software program can be elaborated as:
 
 \begin{code}
 elaborateSoft :: Software a -> Program SIns (P2 CExp SType) a
 elaborateSoft = interpret
 \end{code}
 
-\noindent Where an evaluator for software programs is then defined by combining the elaboration of expressions with an interpreter for its instructions:
+An evaluator for software programs can then defined by combining the elaboration of expressions with an interpreter for the simpler software expressions and instructions:
 
 \begin{code}
 runSoft :: Software a -> IO a
 runSoft = interpert . elaborateSoft
 \end{code}
 
-This approach to expressions and their interpretation has several benefits: the translation is typed, which rules out many potential errors; it is easier to write than a complete translation into source code; the low-level expression type is reusable and can be shared as an elaboration target between multiple high-level expression types.
+This interpretation of expressions have a few benefits: it is typed, which rule out many potential errors; it is easier to write than a complete translation into source code; the low-level expression type is reusable and can be used as an elaboration target for multiple, higher-level expression types.
 
 \section{Components}
 
-The ability to write programs that are constrained to its required functionality, rather than a specific language, means that users can easily experiment with putting their functions on different components in a system. Most interesting heterogeneous programs do however include a mixture of software and hardware fragments where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
+The ability to write a program that is constrained to its required functionality, rather than a specific language, means that users can easily experiment with putting their functions on different components in a system. Most interesting heterogeneous programs do however include a mixture of software and hardware fragments where the different parts communicate with each other. In the kind of FPGAs with embedded systems that we consider, communication is typically done over an AXI4 or AXI4-lite interconnect. 
 
-Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, there is no need for such features in the examples we have shown so far. The lighter interconnect offered by AXI4-lite is a better fit for our examples and will be the focus in this section.
+Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming. A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While full AXI4 certainly has its uses, we have opted to implement the AXI4-lite interconnect---the lighter interconnect offered by AXI4-lite is a better fit for our examples.
 
-Five channels make up the bulk of the AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These five channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and a process is a kind of function that runs automatically once any of its input changes. Both signals and processes are supported by our co-design language and a whole AXI4-lite interconnect is in fact implemented within the language as a function called \codei{axi4lite}. The function takes a hardware component and connects it to the read and write channels of a new interconnect:
+Five channels make up the bulk of the AXI4-lite specification: the read and write address channels, the read and write data channels, and the write acknowledge channel. These five channels are represented in VHDL as signals, driven by processes that implement the associated handshaking and logic for reading and writing. Signals behave very much like the references found in C, and a process is a kind of function that runs automatically once any of its inputs change. Both signals and processes are supported by our co-design language and a whole AXI4-lite interconnect is in fact implemented within the language as a function called \codei{axi4lite}. The function takes a hardware component and connects it to the read and write channels of a new interconnect:
 
 \begin{code}
 axi4lite ::

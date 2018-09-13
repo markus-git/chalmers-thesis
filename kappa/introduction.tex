@@ -20,7 +20,7 @@
 \chapter{Introduction}
 \label{intro}
 
-An embedded system is, in brief, any computer system that is part of a larger system but relies on its own microprocessor. It is embedded as part of a larger machine to solve a particular task, and often does so under memory and real-time constraints. Embedded systems have been have been around for decades, and still control many devices in common use today~\cite{barr2006}. For example, modern cars contain a number of embedded systems, each controlling a small function of the car; one system might control the brakes, while another displays information to the dashboard. In most cases, these embedded sub-systems are all connected together in a network. 
+An embedded system is, in brief, any computer system that is part of a larger system but relies on its own microprocessor. It is embedded as part of a larger machine to solve a particular task, and often does so under memory and real-time constraints. Embedded systems have been around for decades, and still control many devices in common use today~\cite{barr2006}. For example, modern cars contain a number of embedded systems, each controlling a small function of the car; one system might control the brakes, while another displays information to the dashboard. In most cases, these embedded sub-systems are all connected together in a network. 
 
 Developing software for embedded systems, in most cases, requires good knowledge about the hardware on which the software is supposed to run. This is because an embedded system is typically designed with a particular task in mind and consists of the most cost-effective hardware that meets the performance requirements. Developers must therefore ensure that not only are their computations efficient, but also take full advantage of the custom hardware; every line of code counts.
 
@@ -30,9 +30,9 @@ Heterogeneous computing represents an interesting development towards the goal o
 
 A substantial amount of research has gone into addressing the challenges of programming for embedded heterogeneous systems, opening them up for programmers without a background in hardware or embedded system design. Hardware description languages are however still the most commonly used tools, together with C dialects for specific co-processors. While such low-level languages are good for extracting maximum performance from a processor, their portability is severely limited; design exploration in low-level languages is tedious at best and moving programs between software and hardware is often a major undertaking.
 
-Another group of languages that I believe show great promise in describing hardware designs are the functional languages. Higher-order functional languages in particular offer an especially useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}, through higher-order functions and lazy evaluation. These features allow for functions to be treated as first-class objects, where larger applications are constructed by composing such functions in a modular fashion. Only the relevant parts of these smaller functions will show up in the generated source code. Furthermore, the type-system and type classes of functional languages makes it possible to precisely record a function's operational dependencies in its type---functions can depend on the operations they use rather then the software or hardware component they're designed for.
+Another group of languages that I believe show great promise in describing hardware designs are the functional languages. Higher-order functional languages in particular offer an especially useful abstraction mechanism~\cite{baaij2010, bjesse1998, gill2010}, through higher-order functions and lazy evaluation. These features allow for functions to be treated as first-class objects, where larger applications are constructed by composing such functions in a modular fashion. Only the relevant parts of these smaller functions will show up in the generated source code. Furthermore, the type-system and classes of functional languages make it possible to precisely record a function's operational dependencies in its type---functions can depend on the operations they use rather then the software or hardware component they're designed for.
 
-Despite the aforementioned benefits of functional programming languages, they are rarely considered for embedded system development. One reason for their low adaptation is that its difficult to give performance guarantees and resource bounds.
+Despite the aforementioned benefits of functional programming languages, they are rarely considered for embedded system development. One reason for their low adoption is that it is difficult to give performance guarantees and resource bounds.
 
 This thesis presents the first steps towards a functional programming language for embedded heterogeneous systems. Instead of taking on the full challenge of heterogeneous programming head on, we are currently exploring a more modest approach: develop a hardware software co-design language, embed it in Haskell, and see how far we can get. The language is staged and utilizes the rich type system of its host language to facilitate design exploration. Furthermore, we have developed a vector and a signal processing language to accompany the co-design language.
 
@@ -42,7 +42,7 @@ As an example of our co-design language, consider a dot product, also known as a
 a \cdot b = \sum_{i=1}^{n}a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + \cdots + a_{n}b_{n}
 \end{equation}
 
-With an imperative language like C the dot product's result could be computed with a single for-loop that iterates over the two input arrays and calculates the sum of their products, one pair at a time. Such a sequential solution can be implemented in the co-design language as well:
+With an imperative language like C, the dot product's result could be computed with a single for-loop that iterates over the two input arrays and calculates the sum of their products, one step at a time. Such a sequential solution can be implemented in the co-design language as well:
 
 \begin{code}
 dotSeq :: Arr Int32 -> Arr Int32 -> Program (Exp Int32)
@@ -62,14 +62,14 @@ dotVec :: Vec Int32 -> Vec Int32 -> Program (Exp Int32)
 dotVec x y = sum (zipWith (*) x y)
 \end{code}
 
-At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and output:
+At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and its output:
 
 \begin{code}
 dotSig :: Component (Arr Int32 -> Arr Int32 -> Sig Int32)
 dotSig = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
 \end{code}
 
-\noindent The signature of a component lets our compiler inspect its input and output ports to, for example, compile it to a hardware design or hook it up to an AXI4-lite interconnect---a standard for communication between software and hardware components.
+\noindent The signature of a component lets our compiler inspect its input and output ports, for example to compile it to a hardware design or hook it up to an AXI4-lite interconnect---a standard for communication between software and hardware components.
 
 Having wrapped our \codei{dotSig} component in an AXI4-lite interconnect and then put it onto hardware, its possible to reach it from software through memory-mapped I/O. The general idea is that a memory-mapped component will share its address space with the software program, that is, a memory-mapped hardware component can be reached from software by simply reading and writing to regular pointers. As an example, we write a small software program that calls \codei{dotSig} and prints its result:
 

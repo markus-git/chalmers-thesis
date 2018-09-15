@@ -38,7 +38,7 @@ Another group of languages that show great promise in describing hardware design
 
 This thesis is the first few steps towards a functional programming language for embedded heterogeneous systems, like that of a modern FPGA. Instead of taking on the full challenge of heterogeneous programming head on, a more modest approach is currently being explored: develop a hardware software co-design language, embed it in Haskell, and see how far that can go. The language is staged and utilizes the rich type system of its host language to facilitate design exploration. Furthermore, a vector and a signal processing language are introduced to accompany the co-design language, and provides useful abstractions for their respective programming domains.
 
-As an example of the co-design language, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of the products of the corresponding entries of the two vectors:
+As an example of the co-design language, consider a dot product, also known as a scalar product. The dot product is an algebraic operation that takes two vectors of equal length and returns the sum of products for corresponding entries in the two vectors:
 
 \begin{equation}
 a \cdot b = \sum_{i=1}^{n}a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + \cdots + a_{n}b_{n}
@@ -57,12 +57,16 @@ dotSeq x y = do
   getRef sum
 \end{code}
 
-While the above function is faithful to its corresponding implementation in C, the low-level design has forced us to focus on implementation details rather than the mathematical specification of the dot product. In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using the vector language instead. In fact, the same dot product can be implemented with vectors in a single line:
+While the above function is faithful to its corresponding implementation in C, its low-level design has forced a focus on implementation details rather than the mathematical specification of the dot product: it carefully has to make sure indices and lengths are correct and sum is calculated manually in steps. A more idiomatic solution is to make use of the vector language:
+
+% In this situation, where the function can be succinctly expressed as a sum over products, we would be better off using the vector language instead. In fact, the same dot product can be implemented with vectors in a single line:
 
 \begin{code}
 dotVec :: Vec Int32 -> Vec Int32 -> Program (Exp Int32)
 dotVec x y = sum (zipWith (*) x y)
 \end{code}
+
+\noindent where summation and element-wise multiplication is wholly handled by the smaller \codei{sum} and \codei{zipWith} functions.
 
 At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and its output:
 

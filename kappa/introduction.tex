@@ -68,23 +68,27 @@ dotVec x y = sum (zipWith (*) x y)
 
 \noindent where summation and element-wise multiplication is wholly handled by the smaller \codei{sum} and \codei{zipWith} functions.
 
-References, arrays, and for-loops are supported in both C and hardware descriptions. As such, \codei{dotVec} is not tied to either software or hardware and can in fact be compiled to both. Most interesting programs for heterogeneous systems do however make use of a mixture of software and hardware, and their communication.
+References, arrays, and for-loops are supported in both C and hardware descriptions. As such, \codei{dotVec} is not tied to either software or hardware and can in fact be compiled to both. Most interesting programs for heterogeneous systems do however make use of a mixture of software and hardware designs. As an example, assume \codei{dotVec} should be mapped onto hardware and that a software program should to call it and print its result to standard output. Before \codei{dotVec} can be offloaded however, it needs to be given a signature over its input and output channels:
 
 % At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and its output:
 
 \begin{code}
-dotSig :: Component (Arr Int32 -> Arr Int32 -> Sig Int32)
-dotSig = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
+comp :: Component (Arr Int32 -> Arr Int32 -> Sig Int32)
+comp = inputVec 4 $ \x -> inputVec 4 $ \y -> returnVal $ dotVec x y
 \end{code}
 
-\noindent The signature of a component lets our compiler inspect its input and output ports, for example to compile it to a hardware design or hook it up to an AXI4-lite interconnect---a standard for communication between software and hardware components.
+\noindent where the $4$ in \codei{inputVec} is the length of the input vectors.
 
-Having wrapped our \codei{dotSig} component in an AXI4-lite interconnect and then put it onto hardware, its possible to reach it from software through memory-mapped I/O. The general idea is that a memory-mapped component will share its address space with the software program, that is, a memory-mapped hardware component can be reached from software by simply reading and writing to regular pointers. As an example, we write a small software program that calls \codei{dotSig} and prints its result:
+% \noindent The signature of a component lets our compiler inspect its input and output ports, for example to compile it to a hardware design or hook it up to an AXI4-lite interconnect---a standard for communication between software and hardware components.
+
+With a description of a hardware component like \codei{comp}, the compiler can automatically connect it to an AXI4-lite interconnect---a standard bus interface---that is ready for synthesis. Its possible to reach such components from software through, for example, memory-mapped I/O. The general idea is that a memory-mapped hardware component will share its address space with the software program, and can therefore be called like a regular function:
+
+% Having wrapped \codei{dotVec} component in an AXI4-lite interconnect and then put it onto hardware, its possible to reach it from software through memory-mapped I/O. The general idea is that a memory-mapped component will share its address space with the software program, that is, a memory-mapped hardware component can be reached from software by simply reading and writing to regular pointers. As an example, we write a small software program that calls \codei{dotSig} and prints its result:
 
 \begin{code}
-program :: Software ()
-program x y = do
-  dot <- mmap "0x43C00000" dotSig
+prog :: Software ()
+prog = do
+  dot <- mmap "0x43C00000" comp
   xs  <- initArray [1,2,3,4]
   ys  <- initArray [5,6,7,8]
   r   <- newRef
@@ -93,6 +97,8 @@ program x y = do
   printf "sum: %d" res
 \end{code}
 
-The above software program first brings our \codei{dotSig} hardware component into scope by calling the memory-mapping function \codei{mmap} with the components physical address---which we acquired during synthesis---and signature. Two arrays are then declared, one for each input of the hardware component, and a reference for its output. Lastly, the component is called with an argument list that matches its signature, and its result is read from the reference that holds it and printed to standard output.
+\noindent where \codei{mmap} initiates the memory-mapping of \codei{comp} with its address, which is obtained during synthesis, and \codei{call} then calls the mapped component stores its result in \codei{r}.
+
+% The above software program first brings our \codei{dotSig} hardware component into scope by calling the memory-mapping function \codei{mmap} with the components physical address---which we acquired during synthesis---and signature. Two arrays are then declared, one for each input of the hardware component, and a reference for its output. Lastly, the component is called with an argument list that matches its signature, and its result is read from the reference that holds it and printed to standard output.
 
 \end{document}

@@ -22,15 +22,15 @@
 
 High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs).
 
-GPPs and ASICs represent two extremes of available architectures, where field programmable gate arrays (FPGAs) have found a good middle-ground and provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various discrete components and co-processors which, together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}.
+GPPs and ASICs represent two extremes of available architectures, where field programmable gate arrays (FPGAs) have found a good middle-ground and provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various discrete components and co-processors which, together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}. While a modern FPGA shows great promise as a prototypical system for heterogeneous computing, its adoption has been slowed by the fact that it is difficult to program.
 
-A modern FPGA shows great promise as a prototypical system for heterogeneous computing, but its adoption has been slowed by the fact that it is difficult to program. The logic blocks of an FPGA are usually programmed in a hardware description language, while its embedded processors are programmed in a low level dialect of C or even assembler. Furthermore, the various components of a modern FPGA may support different intrinsics and therefore have incompatibilities between the code they can execute even if they are programmed in the same language.
+% Furthermore, the various components of a modern FPGA may support different intrinsics and therefore have incompatibilities between the code they can execute even if they are programmed in the same language.
 
-One of the benefits of using low level languages for embedded systems is that they give a designer fine control over a system's capabilities. However, this control comes at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific component.
+The logic blocks of an FPGA are usually programmed in a hardware description language, while its embedded processors are programmed in a low level dialect of C or even assembler. Low level languages are typically used for embedded systems as they give designers fine control over the system's capabilities. Such fine control does however come at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific system's architecture.
 
 The issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for one FPGA component to another is typically a major undertaking.
 
-Many of the issues faced in heterogeneous computing with low-level languages stem from a lack of abstractions. Some of these languages' modularity problems come as a direct result of the fine grained control they provide, as it will inevitably tie a program to the architecture of its system. Other issues of, for instance, functionality and architecture come as an indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately from program design.
+Many of the issues faced in heterogeneous computing with low-level languages stem from a lack of abstractions. Some of these languages' modularity problems come as a direct result of the fine grained control they provide. Other issues of, for instance, functionality and architecture come as an indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately from an algorithm's design.
 
 % as they allow for the creation of small, reusable libraries that provide solutions to these issues, and then combined in a modular fashion to solve larger problems.
 
@@ -43,11 +43,17 @@ Before we go into combining these benefits for heterogeneous computing, an intro
 \section{Functional Programming}
 \label{functional}
 
-Functional programming, as the name implies, is based around the application of a function to its arguments. In this programming style, a program is written as a function that accepts input and delivers its result. This function itself is defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of nothing but language primitives.
+Functional programming is based around the application of a function to its arguments. In this programming style, a program is written as a function that accepts input and delivers its result. That function itself is defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of nothing but language primitives.
 
-An important distinction between functions in a functional programming language and, say, an imperative language like C, is that functions always return the same value when given the same arguments. More generally, we say that functional programs have no side effects: functions can safely be evaluated in parallel as long as their data dependencies are satisfied.
+An important distinction between functions in a functional programming language and, say, an imperative language like C, is that functions always return the same value when given the same arguments. More generally, we say that functional programs have no side effects: functions can safely be evaluated in parallel as long as their data dependencies are satisfied. This property that is also quite useful when reasoning about a functions behavior.
 
-A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a functional programming language, a number of such higher-order functions that implement common operations are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
+...
+
+% A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator,
+
+% and provides a useful piece of glue code that lets programmers build complex functions from smaller ones.
+
+% In Haskell, a functional programming language, a number of such higher-order functions are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
 
 \begin{code}
 map :: (a -> b) -> [a] -> [b]

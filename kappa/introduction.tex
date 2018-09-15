@@ -68,7 +68,9 @@ dotVec x y = sum (zipWith (*) x y)
 
 \noindent where summation and element-wise multiplication is wholly handled by the smaller \codei{sum} and \codei{zipWith} functions.
 
-At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and its output:
+References, arrays, and for-loops are supported in both C and hardware descriptions. As such, \codei{dotVec} is not tied to either software or hardware and can in fact be compiled to both. Most interesting programs for heterogeneous systems do however make use of a mixture of software and hardware, and their communication.
+
+% At this point we should note that neither version of the dot product mentions any software or hardware specifics and, as such, can be realized in both software and hardware. The dot product can be compiled to software as it is. If we want to put it onto hardware instead, we must first give it a signature that lists its two inputs and its output:
 
 \begin{code}
 dotSig :: Component (Arr Int32 -> Arr Int32 -> Sig Int32)

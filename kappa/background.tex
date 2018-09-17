@@ -145,7 +145,7 @@ times a b = Times a b
 
 % \noindent \codei{const} and \codei{times} now return a representation of the result rather than the result itself. As a consequence, we cannot add new functions without first extending the \codei{Exp} type. From a user's perspective these functions are not that different from their shallow counterparts. In fact, an embedded language can have the look and feel of a stand-alone language.
 
-The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, is what enables functions to inspect, modify, and interpret an expression in order to support, for example, its evaluation:
+As \codei{const} and \codei{times} return a representation of their result rather than the result itself, it is hardware to add new functions without first extending the \codei{Exp} datatype. The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, enables interpretation of expressions in order to, for instance, evaluate them:
 
 \begin{code}
 eval :: Exp -> Int
@@ -153,7 +153,7 @@ eval (Const a)   = a
 eval (Times a b) = (eval a) * (eval b)
 \end{code}
 
-\noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating each operation into its corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. We could just as well have compiled the same expression to, say, its corresponding C code.
+% \noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating each operation into its corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. We could just as well have compiled the same expression to, say, its corresponding C code.
 
 While the implementation of shallow and deep embedding are usually at odds---we cannot have a shallow and deep representation of \codei{Exp} at the same time---there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide nice syntax for their functions.
 

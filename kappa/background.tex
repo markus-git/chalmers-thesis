@@ -92,11 +92,15 @@ The other piece of glue code that functional programming languages provides is o
 (.) g f x = g (f x)
 \end{code}
 
-\noindent where parentheses around the dot imply that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values.
+\noindent where parentheses around the dot imply that function composition is an infix function.
+
+While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. In fact, these benefits extend to embedded types as well, like vectors.
 
 % The benefit of lazy evaluation is not limited to fusing functions and values, but extends to embedded languages as well. For instance, laziness in our co-design language ensures that only the parts of a program that contribute to the end result will be part of the function, that is, no unnecessary code will be generated for a program.
 
-So far, we have looked at a few Haskell functions as an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded domain specific language in Haskell.
+This section gives a brief overview of functional programming in Haskell and shows some of its beneficial properties for embedded languages. The distinction between regular and embedded Haskell is given by the following section, as it introduces the concept of domain specific languages and explains what it entails to be an embedded domain specific language in Haskell.
+
+% So far, a few Haskell functions has an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded domain specific language in Haskell.
 
 \section{Domain Specific Languages}
 \label{domain}

@@ -105,15 +105,15 @@ This section gives a brief overview of functional programming in Haskell and sho
 \section{Domain Specific Languages}
 \label{domain}
 
-A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and captures the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. Both use a language that is specialized to the particular task they have at hand, and both build programs in a form that is familiar to regular programmers; VHDL and JavaScript are both DSLs.
+A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and captures the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. DSLs come in two fundamentally different forms: external and internal, where VHDL and JavaScript are both examples of the former.
 
-DSLs come in two fundamentally different forms: external and internal. An external DSL is a first-class language, with its own compiler or interpreter, and often comes with its own ecosystem. Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs). Haskell, with its static type system, flexible overloading and lazy semantics, has come to host a range of EDSLs~\cite{elliott2003}. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell~\cite{leijen2002, hughes1995, bjesse1998}.
+% An external DSL is a first-class language, with its own compiler or interpreter, and often comes with its own ecosystem.
 
-% The co-design, vector and signal languages presented in this thesis are all examples of internal DSLs.
+% Both use a language that is specialized to the particular task they have at hand, and both build programs in a form that is familiar to regular programmers; VHDL and JavaScript are both DSLs.
+
+Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs). Haskell, with its static type system, flexible overloading and lazy semantics, has come to host a range of EDSLs~\cite{elliott2003}. For instance, popular libraries for parsing, pretty printing, hardware design and testing have all been embedded in Haskell~\cite{leijen2002, hughes1995, bjesse1998}.
 
 EDSLs in Haskell are further divided into one of two kinds: shallow or deep. Conceptually, a shallow embedding captures the semantics of the data in a domain, whereas a deep embedding captures the semantics of the operations in a domain. Both kinds of embeddings have their own benefits and drawbacks. To illustrate the differences between shallow and deep embeddings we implement a small example domain:
-
-% illustrate how shallow embeddings work in Haskell through a small example:
 
 \begin{code}
 type Exp = Int
@@ -125,9 +125,9 @@ times :: Exp -> Exp -> Exp
 times a b = a * b
 \end{code}
 
-\noindent \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers, making use of Haskell's \codei{type} keyword, and is an example of a shallow EDSL. The language around \codei{Exp} is defined by two functions: one for integer literals, called \codei{const}; and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're integral expressions.
+\noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers thus an example of a shallow EDSL.
 
-Another advantage of \codei{Exp} is that we can quickly calculate its value:
+The language around \codei{Exp} is defined by two functions: one for integer literals, called \codei{const}; and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're integral expressions. Another advantage of \codei{Exp} is that we can quickly calculate its value:
 
 \begin{code}
 eval :: Exp -> Int

@@ -131,13 +131,7 @@ The benefit of a shallowly embedded language like \codei{Exp} is that new functi
 
 \begin{code}
 data Exp = Const Int | Times Exp Exp
-\end{code}
 
-% \noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a bar. These constructors forms what is often referred to as a syntax tree, and represent the computations behind an expression.
-
-Having changed \codei{Exp}, we must also change the functions that come with it:
-
-\begin{code}
 const :: Int -> Exp
 const a = Const a
 
@@ -145,7 +139,11 @@ times :: Exp -> Exp -> Exp
 times a b = Times a b
 \end{code}
 
-\noindent \codei{const} and \codei{times} now return a representation of the result rather than the result itself. As a consequence, we cannot add new functions without first extending the \codei{Exp} type. From a user's perspective these functions are not that different from their shallow counterparts. In fact, an embedded language can have the look and feel of a stand-alone language.
+\noindent where \codei{Exp} is now a datatype that lists all supported expressions, which \codei{const} and \codei{times} use construct their results.
+
+% \noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a bar. These constructors forms what is often referred to as a syntax tree, and represent the computations behind an expression.
+
+% \noindent \codei{const} and \codei{times} now return a representation of the result rather than the result itself. As a consequence, we cannot add new functions without first extending the \codei{Exp} type. From a user's perspective these functions are not that different from their shallow counterparts. In fact, an embedded language can have the look and feel of a stand-alone language.
 
 The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, is what enables functions to inspect, modify, and interpret an expression in order to support, for example, its evaluation:
 

@@ -20,15 +20,15 @@
 \chapter{Background}
 \label{background}
 
-High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture. Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs).
+% High demands for efficiency under resource constraints have greatly influenced the development of embedded systems, both in terms of programming practice and architecture.
 
-GPPs and ASICs represent two extremes of available architectures, where field programmable gate arrays (FPGAs) have found a good middle-ground and provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various discrete components and co-processors which, together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}. While a modern FPGA shows great promise as a prototypical system for heterogeneous computing, its adoption has been slowed by the fact that it is difficult to program.
+Today, we see embedded systems consisting of everything between general purpose processors (GPPs) and application specific integrated circuits (ASICs). GPPs and ASICs represent two extremes of available architectures, where field programmable gate arrays (FPGAs) have found a good middle-ground and provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various discrete components and co-processors which, together with their good performance per Watt ratio, have seen them increasingly used in high-performance, computationally intensive systems~\cite{mcmillan2014}. While a modern FPGA shows great promise as a prototypical system for heterogeneous computing, its adoption has been slowed by the fact that it is difficult to program.
 
 % Furthermore, the various components of a modern FPGA may support different intrinsics and therefore have incompatibilities between the code they can execute even if they are programmed in the same language.
 
-The logic blocks of an FPGA are usually programmed in a hardware description language, while its embedded processors are programmed in a low level dialect of C or even assembler. Low level languages are typically used for embedded systems as they give designers fine control over the system's capabilities. Such fine control does however come at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific system's architecture.
+The logic blocks of an FPGA are usually programmed in a hardware description language, while its co-processors are programmed in some low level dialect of C or even assembler. Low level languages are typically used for embedded systems as they give designers fine control over the system's capabilities. Such fine control does however come at a cost, as the programmers must exercise this right during the entire design process. So the problem of implementing an algorithm has become a problem of implementing an algorithm for a specific system's architecture.
 
-The issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for one FPGA component to another is typically a major undertaking.
+The issues with low level languages are magnified for heterogeneous systems, as the developer must specify both its hardware and software parts and how they communicate; ideally she would like to experiment with various choices of what to put in hardware and what in software. Low-level languages provide little support for such design exploration, and rewriting code intended for one of the FPGA's processing elements to another is typically a major undertaking.
 
 Many of the issues faced in heterogeneous computing with low-level languages stem from a lack of abstractions. Some of these languages' modularity problems come as a direct result of the fine grained control they provide. Other issues of, for instance, functionality and architecture come as an indirect consequence of the lack of abstractions. Ideally, such issues would be treated separately from an algorithm's design.
 
@@ -47,13 +47,7 @@ Functional programming is based around the application of a function to its argu
 
 An important distinction between functions in a functional programming language and, say, an imperative language like C, is that functions always return the same value when given the same arguments. More generally, we say that functional programs have no side effects: functions can safely be evaluated in parallel as long as their data dependencies are satisfied. This property that is also quite useful when reasoning about a functions behavior.
 
-...
-
-% A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator,
-
-% and provides a useful piece of glue code that lets programmers build complex functions from smaller ones.
-
-% In Haskell, a functional programming language, a number of such higher-order functions are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
+A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a number of such higher-order functions are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
 
 \begin{code}
 map :: (a -> b) -> [a] -> [b]
@@ -61,13 +55,17 @@ map f []     = []
 map f (x:xs) = f x : map f xs
 \end{code}
 
-The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs. If you by mistake write a program that tries to multiply some integer by a boolean type, it won't even compile and instead warns you about the type error. As for the types themselves, they are a kind of label that every expression has and states what category of operations that the expression belongs in.
+The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function tries to multiply an integer with a boolean, the compiler will reject the function and instead point out the type mismatch. As for the types themselves, they are a kind of label that every expression has and states what category of operations that the expression belongs in. In the case of \codei{map}, its type is a function from another function \codei{f :: a -> b} and a list \codei{xs :: [a]} to an element of type \codei{b}. The second and third line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list, and for non-empty lists, applies \codei{f} to the list's head and recursively calls itself on the list's tail.
 
-A function's type comes after the \codei{::} sign, and in the case of \codei{map}, tells us that its first argument is a function \codei{f :: a -> b} which, given an argument of type \codei{a}, produces a result of type \codei{b}. In addition to the function, \codei{map} also takes a list \codei{xs :: [a]} of element with type \codei{a}, and returns another list of elements with type \codei{b}. As functions cannot have any side effects, we can already make a guess at what this function does and claim that it applies \codei{f} to every element of \codei{xs}.
+% As functions cannot have side effects, it is possible to guess what this function does by just looking at its type.
 
-The second and third line of \codei{map} validate our earlier guess and list the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
+% and claim that it applies \codei{f} to every element of \codei{xs}.
 
-The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators, a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built with a small set of verified combinators. For example, the earlier dot-product from section~\ref{intro} is composed of two such combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}. Both are these functions are in turn defined by smaller functions:
+% A function's type comes after the \codei{::} sign, and in the case of \codei{map}, tells us that its first argument is a function \codei{f :: a -> b} which, given an argument of type \codei{a}, produces a result of type \codei{b}. In addition to the function, \codei{map} also takes a list \codei{xs :: [a]} of elements with type \codei{a}, and returns another list of elements with type \codei{b}. As functions cannot have any side effects, we can already make a guess at what this function does and claim that it applies \codei{f} to every element of \codei{xs}.
+
+% The second and third line of \codei{map} validate our earlier guess and list the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
+
+The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators, a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a small set of pre-verified functions. For example, the earlier dot-product from section~\ref{intro} is composed of two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}. Both are these functions are in turn defined by smaller functions:
 
 \begin{code}
 zipWith :: (a -> b -> c) -> Vec a -> Vec b -> Vec c
@@ -88,7 +86,7 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parentheses around the dot imply that function composition is an infix function. While the size of the intermediate result of \codei{f} could spoil the usefulness of composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values.
 
-The benefit of lazy evaluation is not limited to fusing functions and values, but extends to embedded languages as well. For instance, laziness in our co-design language ensures that only the parts of a program that contribute to the end result will be part of the function, that is, no unnecessary code will be generated for a program.
+% The benefit of lazy evaluation is not limited to fusing functions and values, but extends to embedded languages as well. For instance, laziness in our co-design language ensures that only the parts of a program that contribute to the end result will be part of the function, that is, no unnecessary code will be generated for a program.
 
 So far, we have looked at a few Haskell functions as an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded domain specific language in Haskell.
 

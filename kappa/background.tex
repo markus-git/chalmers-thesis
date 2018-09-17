@@ -94,7 +94,7 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parentheses around the dot imply that function composition is an infix function.
 
-While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. In fact, these benefits extend to embedded types as well, like vectors.
+While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. In fact, its benefits can extend to embedded types as well, like vectors.
 
 % The benefit of lazy evaluation is not limited to fusing functions and values, but extends to embedded languages as well. For instance, laziness in our co-design language ensures that only the parts of a program that contribute to the end result will be part of the function, that is, no unnecessary code will be generated for a program.
 
@@ -127,7 +127,9 @@ times a b = a * b
 
 \noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers thus an example of a shallow EDSL. Two functions are also provided: \codei{const} to lift integer literals, and \codei{times} to multiply expressions.
 
-The benefit of a shallowly embedded language like \codei{Exp} is that new functions can easily be added, as long as they're integral expressions, and evaluations is straightforward, its simply the identify function. A shallow type is however difficult to compile as its functions only return values, there is no representation of the computation leading up to that value. To compile an embedded language it is better for functions to return an intermediate representation of its result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result. \codei{Exp} can be reimplemented to use a deep embedding:
+Two benefits of a shallowly embedded language is that its easy to add new functions, and evaluation is simply the identity funciton. ..
+
+% The benefit of a shallowly embedded language like \codei{Exp} is that new functions can be added and evaluations is straightforward---evaluation is the identify function. A shallow type is however difficult to compile as its functions only return values, there is no representation of the computation leading up to that value. To compile an embedded language it is better for functions to return an intermediate representation of its result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result. \codei{Exp} can be reimplemented to use a deep embedding:
 
 \begin{code}
 data Exp = Const Int | Times Exp Exp
@@ -155,7 +157,7 @@ eval (Times a b) = (eval a) * (eval b)
 
 % \noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating each operation into its corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. We could just as well have compiled the same expression to, say, its corresponding C code.
 
-While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}.
+While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. ...
 
 % In the co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide nice syntax for their functions.
 

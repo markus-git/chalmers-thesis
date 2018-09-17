@@ -155,9 +155,11 @@ eval (Times a b) = (eval a) * (eval b)
 
 % \noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating each operation into its corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. We could just as well have compiled the same expression to, say, its corresponding C code.
 
-While the implementation of shallow and deep embedding are usually at odds---we cannot have a shallow and deep representation of \codei{Exp} at the same time---there has been work done in order to combine their benefits~\cite{svenningsson2012}. In our co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide nice syntax for their functions.
+While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}.
 
-Now that we have a grasp of functional programming, what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in the co-design language.
+% In the co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide nice syntax for their functions.
+
+% Now that we have a grasp of functional programming, what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in the co-design language.
 
 \section{Embedded Programming in Haskell}
 \label{embedded}

@@ -45,7 +45,9 @@ Before we go into combining these benefits for heterogeneous computing, an intro
 
 Functional programming is based around the application of a function to its arguments. In this programming style, a program is written as a function that accepts input and delivers its result. That function itself is defined in terms of smaller functions, which in turn are defined using smaller functions still and, in the end, a function consists of nothing but language primitives.
 
-An important distinction between functions in a functional programming language and, say, an imperative language like C, is that functions always return the same value when given the same arguments. More generally, we say that functional programs have no side effects: functions can safely be evaluated in parallel as long as their data dependencies are satisfied. This property that is also quite useful when reasoning about a functions behavior.
+An important distinction between functions in a functional programming language and, say, an imperative language like C, is that functions always return the same value when given the same arguments. More generally, we say that functional programs have no side effects: functions can safely be evaluated in parallel as long as their data dependencies are satisfied.
+
+% This property that is also quite useful when reasoning about a functions behavior.
 
 A function that accepts other functions as arguments is often referred to as a higher-order function, or a combinator, and provides a useful piece of glue code that lets programmers build complex functions from smaller ones. In Haskell, a number of such higher-order functions are provided by its standard libraries. One such function is \codei{map} and can be defined as follows:
 
@@ -55,7 +57,9 @@ map f []     = []
 map f (x:xs) = f x : map f xs
 \end{code}
 
-The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function tries to multiply an integer with a boolean, the compiler will reject the function and instead point out the type mismatch. As for the types themselves, they are a kind of label that every expression has and states what category of operations that the expression belongs in. In the case of \codei{map}, its type is a function from another function \codei{f :: a -> b} and a list \codei{xs :: [a]} to an element of type \codei{b}. The second and third line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list, and for non-empty lists, applies \codei{f} to the list's head and recursively calls itself on the list's tail.
+The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function tries to multiply an integer with a boolean, the compiler will reject the function and instead point out the type mismatch. In the case of \codei{map}, its type is a function from another function \codei{f :: a -> b} and a list \codei{xs :: [a]} to an element of type \codei{b}. The second and third line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list, and for non-empty lists, applies \codei{f} to the list's head and recursively calls itself on the list's tail.
+
+% As for the types themselves, they are a kind of label that every expression has and states what category of operations that the expression belongs in. 
 
 % As functions cannot have side effects, it is possible to guess what this function does by just looking at its type.
 
@@ -65,7 +69,9 @@ The first line specifies the type of \codei{map}, because in Haskell, every func
 
 % The second and third line of \codei{map} validate our earlier guess and list the full definition of the function. Firstly, it says that given an empty list, shown as \codei{[]}, the result is another empty list---there's simply nothing to apply \codei{f} to. Secondly, in the case where \codei{map} is given a non-empty list \codei{x:xs} where \codei{x} is the list head and \codei{xs} its tail, it applies \codei{f} to \codei{x} and concatenates its result with the list made from a recursive call to itself on \codei{xs}.
 
-The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators, a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a small set of pre-verified functions. For example, the earlier dot-product from section~\ref{intro} is composed of two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}. Both are these functions are in turn defined by smaller functions:
+The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators, a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a small set of pre-verified functions. For example, the earlier dot-product from section~\ref{intro} is composed of two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}:
+
+% Both are these functions are in turn defined by smaller functions:
 
 \begin{code}
 zipWith :: (a -> b -> c) -> Vec a -> Vec b -> Vec c
@@ -75,7 +81,9 @@ sum :: Vec Int -> Int
 sum = fold (+) 0
 \end{code}
 
-\noindent \codei{fmap} here is similar to the above \codei{map} but works for vectors instead of lists, \codei{zip} joins two vectors, and \codei{fold} reduces a vector into a scalar value using addition and starting at zero. These three functions are all part of the vector library.
+\noindent \codei{fmap} here is similar to the above \codei{map} but works for vectors instead of lists, \codei{zip} joins two vectors into a single vector of pairs, and \codei{fold} reduces a vector into a scalar value using addition and starting at zero.
+
+% These three functions are all part of the vector library.
 
 The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g <> f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
 

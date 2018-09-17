@@ -125,24 +125,15 @@ times :: Exp -> Exp -> Exp
 times a b = a * b
 \end{code}
 
-\noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers thus an example of a shallow EDSL.
+\noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers thus an example of a shallow EDSL. Two functions are also provided: \codei{const} to lift integer literals, and \codei{times} to multiply expressions.
 
-The language around \codei{Exp} is defined by two functions: one for integer literals, called \codei{const}; and another for multiplication, called \codei{times}. Note we could easily have added more functions, as long as they're integral expressions. Another advantage of \codei{Exp} is that we can quickly calculate its value:
-
-\begin{code}
-eval :: Exp -> Int
-eval a = a
-\end{code}
-
-\noindent Shallowly embedded types do however perform quite poorly if we wish to compile the language; functions only return values and provide no way to look at the representation of a program. To compile an embedded language it is better to use an intermediate representation for functions, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result.
-
-We can reimplement our earlier \codei{Exp} type using deep embedding:
+The benefit of a shallowly embedded language like \codei{Exp} is that new functions can easily be added, as long as they're integral expressions, and evaluations is straightforward, its simply the identify function. A shallow type is however difficult to compile as its functions only return values, there is no representation of the computation leading up to that value. To compile an embedded language it is better for functions to return an intermediate representation of its result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result. \codei{Exp} can be reimplemented to use a deep embedding:
 
 \begin{code}
 data Exp = Const Int | Times Exp Exp
 \end{code}
 
-\noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a bar. These constructors forms what is often referred to as a syntax tree, and represent the computations behind an expression.
+% \noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a bar. These constructors forms what is often referred to as a syntax tree, and represent the computations behind an expression.
 
 Having changed \codei{Exp}, we must also change the functions that come with it:
 

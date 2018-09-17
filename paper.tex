@@ -77,7 +77,7 @@ University of Somewhere\\
 Sweden
 }
 
-\oppositiondate{10.00 am, 22\textsuperscript{th} Oct, 2018 in HA2 Hörsalsvägen 4, Göteborg}
+\oppositiondate{10.00 am, 16\textsuperscript{th} Oct, 2018 in HA2 Hörsalsvägen 4, Göteborg}
 
 % You should scale the figure according to textwidth and or paperheight.
 \coverfigure{\scalebox{-1}[1]{\includegraphics[width=\textwidth,height=0.4\paperheight,keepaspectratio]{figures/Cover}}}
@@ -85,11 +85,13 @@ Sweden
 % \covercaption{}
 
 \firstabstract{
-Developing software for embedded systems presents quite the challenge; not only does embedded system demand good knowledge of the hardware they run on, but also demand efficiency under tight resource constraints. A modern FPGA shows great promise as a prototypical system for heterogeneous embedded computing. In exchange their benefits, the combination of a FPGA's hardware and software components makes the already difficult task of programming for embedded systems harder still.
+Developing software for embedded systems presents quite the challenge---not only do these systems demand good knowledge of the hardware they run on, but their limited resources also make it difficult to achieve efficiency. For embedded systems with different kinds of processing elements, the challenge is even greater; the presence of heterogeneous elements both raises all of the issues associated with homogeneous systems, and may also cause non-uniform system development and capability. Still, these systems are able to achieve good energy efficiency and performance by incorporating specialized processing units.
 
-This thesis explores a functional approach to embedded systems development through a hardware software co-design language embedded in Haskell. A functional approach can address many of the modularity problems of heterogeneous system development, which are typically programmed in low-level languages. Furthermore, the co-design language serves as a compilation target for a signal processing and vector library that introduces useful abstractions.
+In this thesis we explore a functional approach to heterogeneous system development, with a staged hardware software co-design language embedded in Haskell, to address many of the modularity problems typically found in such systems. This staged approach enables designers to build their applications from reusable components and skeletons, while retaining control over much of the generated source code. Design exploration can also benefit from a functional approach, as Haskell's powerful type system allow for fine grained control over the dependencies of a design. For instance, the co-design language can support not only software and hardware specific functions but also language independent functions that only rely on the functions they use.
 
-Low-level languages are mainly considered for embedded system due to the fine control they give over a system's capabilities. The co-design language therefore has explicit memory control and a staged compilation scheme, that is, compilation is a series of translations to progressively smaller languages. This approach gives a designer control over the generated source code, more so than is typically had in a lazy functional language. The techniques presented in this thesis are however not limited to hardware software co-design, as it is based on a monadic representation of imperative programs that is loosely coupled to its expression and predicate types. As such, the techniques are usable to library designers looking to model other, imperative languages.
+The co-design language is based on a monadic representation of imperative programs that is loosely coupled to its statement, expression, and predicate types. This makes it easy to support extensible types, that is, the current language can be adapted to new processing elements with their own intrinsic operations, and to introduce new interpretations. The model and its associated techniques are not limited to hardware software co-design, and could be of use for other imperative languages as well.
+
+In addition to the hardware software co-design, this thesis also introduces a signal processing and vector language. The first extends an expression type with support for synchronous data-flow computations, while the second extends an array type with a functional representation of vectors that support fusion. Both extensions can be compiled to the co-design language, but neither extension is dependent on it and can be fitted for use in other embedded languages.
 }
 
 \keywords{functional programming, domain specific languages, signal processing, code generation}

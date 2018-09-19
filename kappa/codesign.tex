@@ -20,16 +20,20 @@
 \chapter{Co-Design}
 \label{codesign}
 
-In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of an FIR filter, one with vectors and one with signals. For the kind of heterogeneous computing our co-design language aims to describe, the simplified types we have shown so far are not enough. Heterogeneous systems typically see hardware code interleaved with software code, and our language therefore needs to be able to describe both. To facilitate design exploration we also need to support descriptions that are not restricted to either language, but rather the operations they require.
+% In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of an FIR filter, one with vectors and one with signals. For the kind of heterogeneous computing our co-design language aims to describe, the simplified types we have shown so far are not enough. Heterogeneous systems typically see hardware code interleaved with software code, and our language therefore needs to be able to describe both. To facilitate design exploration we also need to support descriptions that are not restricted to either language, but rather the operations they require.
 
-C and its dialects are perhaps the most commonly used languages for writing software in embedded systems. The co-design language is no different and compiles its software programs to C as well. For hardware descriptions, we use the VHDL language. This decision is purely based on the fact it is the hardware description language we are most comfortable with. Neither choice of language is final, and the language does support the addition of new target languages. Furthermore, both software and hardware are extensible and can be adapted to describe a multitude of embedded systems.
+% C and its dialects are perhaps the most commonly used languages for writing software in embedded systems. The co-design language is no different and compiles its software programs to C as well. For hardware descriptions, we use the VHDL language. This decision is purely based on the fact it is the hardware description language we are most comfortable with. Neither choice of language is final, and the language does support the addition of new target languages. Furthermore, both software and hardware are extensible and can be adapted to describe a multitude of embedded systems.
 
-Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
+% Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
 
-\section{Hardware Software Programs}
-\label{program}
+% \section{Hardware Software Programs}
+% \label{program}
 
-C and VHDL are different from one another in that one describes software code and the other hardware designs, although both languages use an imperative style of programming. The co-design language is therefore built on a deep embedding of monads as a representation of imperative programs---remember that monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
+Starting with a single Haskell program, the hardware software co-design library is designed with three main tasks in mind: generate C for the software parts, VHDL for the hardware parts, and a combination of C and VHDL for the transmission of data between processing elements. C and VHDL are different from one another in that one describes sequential software and the other parallel hardware, both languages can however be desrcibed with imperative style of programming.
+
+
+
+% The co-design language is therefore built on a deep embedding of monads as a representation of imperative programs---remember that monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
 
 The general idea behind a monadic embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example of these similarities, consider a software program for reversing an array:
 

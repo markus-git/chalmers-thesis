@@ -20,83 +20,58 @@
 \chapter{Co-Design}
 \label{codesign}
 
-% In section~\ref{embedded} we introduced a simplified version of our co-design, vector and signal languages to illustrate embedded programming in Haskell. We then went on to implement two versions of an FIR filter, one with vectors and one with signals. For the kind of heterogeneous computing our co-design language aims to describe, the simplified types we have shown so far are not enough. Heterogeneous systems typically see hardware code interleaved with software code, and our language therefore needs to be able to describe both. To facilitate design exploration we also need to support descriptions that are not restricted to either language, but rather the operations they require.
+Starting with a single Haskell program, the hardware software co-design library is designed with three main tasks in mind: generate C for the software parts, VHDL for the hardware parts, and a combination of C and VHDL for the transmission of data between processing elements. While C and VHDL are different from one another in that one describes sequential software and the other parallel hardware, both languages can be described with an imperative style of programming. As a consequence, the co-design language is based on a monadic representation of imperative programs.
 
-% C and its dialects are perhaps the most commonly used languages for writing software in embedded systems. The co-design language is no different and compiles its software programs to C as well. For hardware descriptions, we use the VHDL language. This decision is purely based on the fact it is the hardware description language we are most comfortable with. Neither choice of language is final, and the language does support the addition of new target languages. Furthermore, both software and hardware are extensible and can be adapted to describe a multitude of embedded systems.
-
-% Starting with a single Haskell program, our co-design library is designed with three main tasks in mind: generate C code for the software parts, VHDL for the hardware parts, and to generate a combination of software and hardware for the transmission of data between components.
-
-% \section{Hardware Software Programs}
-% \label{program}
-
-Starting with a single Haskell program, the hardware software co-design library is designed with three main tasks in mind: generate C for the software parts, VHDL for the hardware parts, and a combination of C and VHDL for the transmission of data between processing elements. C and VHDL are different from one another in that one describes sequential software and the other parallel hardware, both languages can however be desrcibed with imperative style of programming.
-
-
-
-% The co-design language is therefore built on a deep embedding of monads as a representation of imperative programs---remember that monads can be thought of as composable descriptions of computations, that is, they provide a means to connect smaller programs into a single, larger program.
-
-The general idea behind a monadic embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine---which looks similar to programs written in a stateful monad using Haskell's do-syntax. In fact, a stateful program composed with monadic operations can be directly translated into statements in an imperative language. As an example of these similarities, consider a software program for reversing an array:
+The general idea behind a monad embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to functions written in a stateful monad. In fact, statements written in a stateful monad can be directly translated into statements in an imperative language. As an example of these similarities, consider the following program for reversing an array in place:
 
 \begin{code}
-reverseS :: SArr Int32 -> Software ()
-reverseS arr =
-  for 0 (len `div` 2) $ \ix -> do
-    aix <- getArr arr ix
-    ajx <- getArr arr (len - ix - 1)
-    setArr arr ix ajx
-    setArr arr (len - ix - 1) aix
+rev :: SArr Int32 -> Software ()
+rev arr = for 0 (len `div` 2) $ \ix -> do
+   aix <- getArr arr ix
+   ajx <- getArr arr (len - ix - 1)
+   setArr arr ix ajx
+   setArr arr (len - ix - 1) aix
   where
     len = length arr
 \end{code}
 
-The implementation of \codei{reverseS} certainly has the look and feel of a imperative program, sans a few syntactical differences. Its type signature tells us that it takes an array over signed integers as input and produces a software program---notice that the array type \codei{SArr} is prefixed with an \codei{S} in order to show that it is intended to be used with software statements. The return type is empty since the array is reversed in place.
+\noindent which certainly has the look and feel of a typical imperative program, sans a few syntactical differences. 
 
-While the type of \codei{reverseS} is that of a software program, there's nothing software specific about its implementation. For-loops and arrays are both part of most imperative languages, including C and VHDL. We could just as well have implemented reverse as a hardware function. In fact, we can define the hardware version by simply changing the previous function's type signature while keeping its body intact:
-
-\begin{code}
-reverseH :: HArr Int32 -> Hardware ()
-reverseH arr =
-  for 0 (len `div` 2) $ \ix -> do
-    aix <- getArr arr ix
-    ajx <- getArr arr (len - ix - 1)
-    setArr arr ix ajx
-    setArr arr (len - ix - 1) aix
-  where
-    len = length arr
-\end{code}
-
-The similarity between \codei{reverseS} and \codei{reverseH} hint that a software or hardware type for reverse is unnecessarily restrictive. A function type that is not limited to either language, but rather the functionality it requires, can be expressed in the co-design language thanks to type classes it provides. These classes are used to ensure a type provides the functionality a program requires, like \codei{Num} did for the numerical expressions in section~\ref{embedded}. That is, we can replace the software and hardware types with a generic program type and then add constraints for any functionality we require.
-
-Going back to our reverse example, we can give it the following generic type:
+Note that \codei{rev} is a software program, as told by its type, but its implementation is not specific to software: for-loops and arrays are part of both C and VHDL. The function could just as well have been implemented in hardware. In fact, a hardware version of \codei{rev} can be defined by swapping its software types with their corresponding hardware types:
 
 \begin{code}
-reverse :: (Monad m, Arrays m, Control m, TypeM m Int32)
-        => Arr m Int32 -> m ()
+rev :: HArr Int32 -> Hardware ()
 \end{code}
 
-\noindent \codei{SArr} and \codei{HArr} are substituted for the generic array type \codei{Arr}, which is parameterized on the monad \codei{m}. Such an associated type for arrays lets us talk about the array type of \codei{m}; \codei{Arr} will turn into either \codei{SArr} or \codei{HArr} when \codei{m} is instantiated as the software or hardware monad.
+The fact that \codei{rev} can be implemented in both software and hardware by simply changing its type does imply that labeling it as either is unnecessarily restrictive. Programs that are constrained by the functionality they require, rather than a specific language, can be described with type classes provided by the co-design language:
 
-Three new constraints were introduced for the generic reverse, namely \codei{Arrays}, \codei{Control}, and \codei{TypeM}. The first two ensure that \codei{m} supports arrays and for-loops, whereas the third one states that signed integers is a valid type in \codei{m}. \codei{Arrays} and \codei{Control} are defined as follows:
+\begin{code}
+rev :: (Monad m, Arrays m, Control m, Type m Int32) => Arr m Int32 -> m ()
+\end{code}
+
+\noindent The now generic \codei{rev} substitutes \codei{SArr} and \codei{HArr} for a \codei{Arr}, the array type associated with monad \codei{m}, and introduces three type classes: \codei{Arrays}, which defines the \codei{Arr} type and its related functions; \codei{Control}, for control flow operations like a for-loop; and \codei{Type}, which ensures a type is representable. Parts of these classes are defined as follows:
 
 \begin{code}
 class Monad m => Arrays m where
   type Arr m
-  newArr :: TypeM m a => Exp m Length -> m (Arr m a)
-  getArr :: TypeM m a => Arr m a -> Exp m Index -> m a
-  setArr :: TypeM m a => Arr m a -> Exp m Index -> a -> m ()
+  newArr :: Type m a => Exp m Length -> m (Arr m a)
+  getArr :: Type m a => Arr m a -> Exp m Index -> m a
+  setArr :: Type m a => Arr m a -> Exp m Index -> a -> m ()
 
 class Monad m => Control m where
   for :: (TypeM m a, Integral a) => Exp m a -> Exp m a -> (Exp m a -> m ())
       -> m ()
 \end{code}
 
-\noindent Each class lists the functions it provides and in the case of arrays, the type to use with them; \codei{Exp} represents the expression type associated with \codei{m}. Seeing as these operations are quite common, we give a short-hand for a collection of them plus references:
+\noindent where each class lists the functions it provides and in the case of arrays, the type to use with them; \codei{Exp} represents the expression type associated with \codei{m}. The following short-hand for a collection of purely computational operations is defined in order to keep types short:
 
 \begin{code}
-type MonadComp m = (Monad m, References m, Arrays m, Control m)
+type Comp m = (Monad m, References m, Arrays m, Control m)
 \end{code}
 
-Just as there are classes of operations, that both software and hardware support, there are also operations that some languages support but others do not. The type classes therefore form a hierarchy. Monads form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads. For example, processes in hardware are given by the following type class:
+In addition to the collection of classes in \codei{MonadComp}, there are also classes of operations that only one of the two languages support. The type classes there form a hierarchy with monads at the base. Classes intended for either the software or hardware branches also require the type is an extension of their respective monads. For example, hardware processes are given by the following type class:
+
+% Just as there are classes of operations, that both software and hardware support, there are also operations that some languages support but others do not. The type classes therefore form a hierarchy. Monads form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads. For example, processes in hardware are given by the following type class:
 
 \begin{code}
 class HardwareMonad m => Process m where

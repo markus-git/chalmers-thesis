@@ -94,11 +94,13 @@ The other piece of glue code that functional programming languages provides is o
 
 \noindent where parentheses around the dot imply that function composition is an infix function.
 
-While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. In fact, its benefits can extend to embedded types as well, like vectors.
+While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. Its benefits extend to embedded types as well, and guarantees fusion of vectors.
 
 % The benefit of lazy evaluation is not limited to fusing functions and values, but extends to embedded languages as well. For instance, laziness in our co-design language ensures that only the parts of a program that contribute to the end result will be part of the function, that is, no unnecessary code will be generated for a program.
 
-This section gives a brief overview of functional programming in Haskell and shows some of its beneficial properties for embedded languages. The distinction between regular and embedded Haskell is given by the following section, and introduces the concept of domain specific languages in Haskell and what that entails.
+This section has given a brief overview of functional programming in Haskell and its beneficial properties for embedded languages. So far, the distinction between regular and embedded Haskell have yet been made. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded in Haskell. 
+
+% The distinction between regular and embedded Haskell is given by the following section, and introduces the concept of domain specific languages in Haskell and what that entails.
 
 % So far, a few Haskell functions has an introduction to functional programming and talked a bit about how its beneficial properties can help embedded languages. We have yet to make the distinction between regular and embedded Haskell. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded domain specific language in Haskell.
 
@@ -127,7 +129,7 @@ times a b = a * b
 
 \noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers thus an example of a shallow EDSL. Two functions are also provided: \codei{const} to lift integer literals, and \codei{times} to multiply expressions.
 
-Two benefits of a shallowly embedded language is that its easy to add new functions, and evaluation is simply the identity funciton. ..
+Two benefits of a shallowly embedded language like \codei{Exp} are that it is easy to add new functions and that evaluation is straightforward---the a value of type \codei{Exp} is the result of some expression. On the other hand, it is difficult to compile shallow types as there is no representation of the expressing that built its value. It is easier to compile an embedded language if its functions instead return an intermediate representation of their result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as deep embedding, and \codei{Exp} can be reimplemented using it:
 
 % The benefit of a shallowly embedded language like \codei{Exp} is that new functions can be added and evaluations is straightforward---evaluation is the identify function. A shallow type is however difficult to compile as its functions only return values, there is no representation of the computation leading up to that value. To compile an embedded language it is better for functions to return an intermediate representation of its result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as a deep embedding and its functions return an abstract syntax tree that represents the computed value instead of its result. \codei{Exp} can be reimplemented to use a deep embedding:
 
@@ -141,13 +143,17 @@ times :: Exp -> Exp -> Exp
 times a b = Times a b
 \end{code}
 
-\noindent where \codei{Exp} is now a datatype that lists all supported expressions, which \codei{const} and \codei{times} use construct their results.
+\noindent where \codei{Exp} is now a datatype that lists all supported expressions, which \codei{const} and \codei{times} use to construct their results.
 
 % \noindent Expressions now contain two constructors, one for integer literals and another for multiplication of expressions---Haskell's \codei{data} keyword introduces a new type and its different constructors are separated by a bar. These constructors forms what is often referred to as a syntax tree, and represent the computations behind an expression.
 
 % \noindent \codei{const} and \codei{times} now return a representation of the result rather than the result itself. As a consequence, we cannot add new functions without first extending the \codei{Exp} type. From a user's perspective these functions are not that different from their shallow counterparts. In fact, an embedded language can have the look and feel of a stand-alone language.
 
-As \codei{const} and \codei{times} return a representation of their result rather than the result itself, it is hardware to add new functions without first extending the \codei{Exp} datatype. The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, enables interpretation of expressions in order to, for instance, evaluate them:
+% As \codei{const} and \codei{times} return a representation of their result rather than the result itself, it is harder to add new functions without first extending the \codei{Exp} datatype. The syntax tree used for a deeply embedded type like \codei{Exp}, while inflexible compared to its shallow version, enables interpretation of expressions in order to, for instance, evaluate them:
+
+% As functions in a deeply embedded language return a representation of their result rather than the result itself, it is possible to build another function that interprets these to create, for instance, an evaluator:
+
+As values in a deeply embedded language like \codei{Exp} are representations of the expressions that built it, rather than their result, it is possible to interpret them and, for example, define a function that evalutes them into integers:
 
 \begin{code}
 eval :: Exp -> Int
@@ -155,11 +161,15 @@ eval (Const a)   = a
 eval (Times a b) = (eval a) * (eval b)
 \end{code}
 
+\noindent The ability to interpret values come at the cost of making it harder to add new functions over \codei{Exp} without first extending its datatype.
+
 % \noindent Each line of \codei{eval} handles one of the two constructors in \codei{Exp}, translating each operation into its corresponding Haskell value. Evaluating an expression to its equivalent Haskell value is however not the only supported interpretation of expressions. We could just as well have compiled the same expression to, say, its corresponding C code.
 
-While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. ...
+While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. The co-design language does make use of such a combination of deep and shallow embeddings: its core datatype is implemented using a deep embedding and user facing libraries use shallow embeddings built on top of the core. This mixture of embeddings ensures that the core is easy to interpret while simultaneously allowing user-facing libraries to provide a nice and extensible syntax.
 
 % In the co-design language, we make use of such a combination of deep and shallow embeddings: the core syntax is implemented as a deep embedding, with user facing libraries as shallow embeddings on top. This mixture of embeddings means that our core language is easy to interpret, while the user-facing libraries are able to provide nice syntax for their functions.
+
+At this point, this section and the previous one have given a brief overview of functional programming and domain specific languages, showcasing Haskell and the benefits its functional style provides for embedded languages. The next section introduces the co-design language through a few examples and highlights these benefits.
 
 % Now that we have a grasp of functional programming, what domain specific languages in Haskell are and the ideas behind them, the next section will go through a larger example in order to showcase embedded programming in the co-design language.
 
@@ -412,3 +422,5 @@ The remainder of this thesis goes over the languages in detail to highlight the 
 \end{itemize}
 
 \end{document}
+
+%%  LocalWords:  DSLs EDSLs

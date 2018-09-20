@@ -118,29 +118,38 @@ data If fs a where
   If :: exp Bool -> prog () -> prog () -> ControlCMD (P3 prog exp pred) ()
 \end{code}
 
-\noindent where \codei{P3} is synonym for a type-level list of three arguments, here \codei{prog}, \codei{exp}, and \codei{pred}. Although \codei{pred} is not used by \codei{If}, it is included to keep its type consistent with other instructions that do use it. \codei{If} can already be added to a program's set of instructions like so:
+\noindent where \codei{P3} is synonym for a type-level list of three arguments, here \codei{prog}, \codei{exp}, and \codei{pred}. Although \codei{pred} is not used by \codei{If}, it is included to keep its type consistent with other instructions that do use it. Making \codei{If} an instance of the \codei{HFunctor} class is straightforward, as it simply calls applies the function on its two subprograms.
+
+TODO.
+
+% A program type with its , \codei{If} can be added its set of instructions like so:
 
 \begin{code}
 type MyProgram = Program (Old :+: If) (P2 Exp Pred)
 \end{code}
 
-\noindent Here, \codei{Old}, \codei{Exp}, and \codei{Pred} are some instruction, expression, and predicate types. The recursive program type will set the type of subprograms in \codei{If} to \codei{MyProgram}.
+\noindent The program type will set the type of subprograms in \codei{If} to \codei{MyProgram}, and its expression and predicate types to \codei{Exp} and \codei{Pred}.
+
+If the old instrucion set of \codei{MyProgram} supported, for instance, interpretation in the code generation monad \codei{CGen}, the extended version no longer does: \codei{If} has yet been given such an intrepretation. Assuming \codei{Exp} can be interpreted in the \codei{CGen} monad, TODO.
+
+\begin{code}
+instance Interp If CGen (P2 Exp Pred) where
+  interp (If b tru fls) = do
+    cc <- compExp b
+    addStm [cstm| if ($cc) {$items:tru} else {$items:fls} |]
+\end{code}
+
+\noindent where \codei{addStm} adds the quoted C statement to the code generator---quotation is provided by the Haskell package \textit{language-c-quote}.
+
 
 % The final step to our extension is to add support for interpreting \codei{MyProgram}, that is, we must define an instances for \codei{Interp} and \codei{HFunctor}. Fortunately, both classes distribute over \codei{(:+:)}, so we need only define instances for \codei{If}. The \codei{HFunctor} instance is defined as:
 
-\begin{code}
-instance HFunctor ControlCMD where
-  hfmap f (If c thn els) = If c (f thn) (f els)
-\end{code}
+% \begin{code}
+% instance HFunctor If where
+%   hfmap f (If c thn els) = If c (f thn) (f els)
+% \end{code}
 
 % \noindent While interpretation in, for example, the \codei{IO} monad could look as follows:
-
-\begin{code}
-instance Interp ControlCMD IO fs where
-  interp (If b tru fls) = if evalExp b then tru else fls
-\end{code}
-
-\noindent where \codei{evalExp} is an evaluator for the expression language.
 
 \section{Expressions}
 \label{expr}

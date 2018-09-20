@@ -35,8 +35,6 @@ rev arr = for 0 (len `div` 2) $ \ix -> do
     len = length arr
 \end{code}
 
-\noindent which certainly has the look and feel of a typical imperative program, sans a few syntactical differences. 
-
 Note that \codei{rev} is a software program, as told by its type, but its implementation is not specific to software: for-loops and arrays are part of both C and VHDL. The function could just as well have been implemented in hardware. In fact, a hardware version of \codei{rev} can be defined by swapping its software types with their corresponding hardware types:
 
 \begin{code}
@@ -71,61 +69,23 @@ type Comp m = (Monad m, References m, Arrays m, Control m)
 
 In addition to the collection of classes in \codei{MonadComp}, there are also classes of operations that only one of the two languages support. The type classes there form a hierarchy with monads at the base. Classes intended for either the software or hardware branches also require the type is an extension of their respective monads. For example, hardware processes are given by the following type class:
 
-% Just as there are classes of operations, that both software and hardware support, there are also operations that some languages support but others do not. The type classes therefore form a hierarchy. Monads form the base of the class hierarchy, but functions intended for either software or hardware branches also require that \codei{m} is an extension of their respective monads. For example, processes in hardware are given by the following type class:
-
 \begin{code}
 class HardwareMonad m => Process m where
   process :: m () -> m ()
 \end{code}
 
-At this point we should note that types introduced in this section are slightly different from those found in section~\ref{embedded}. For instance, the array type now has an extra parameter \codei{m}. The earlier types are in fact synonyms for the software types introduced in this section, and served to give a simplified introduction to the co-design language. We reimplement the dot-product using the new types as a comparison to the old:
+The co-design language is intended to provide a convenient model of imperative programs and, as section~\ref{embedded} showed, also serves as base that extensions like the vector and signal processing languages can be build upon. Furthermore, the ability to write generic programs facilitates design exploration, and while they are not always ideal as hardware description---purely computational instructions does not support, for instance, pipelining---once a layout has been decided, it is easy to fix a program's type to hardware and optimize its implementation.
 
-\begin{code}
-dot :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a -> m (Exp m a)
-dot x y = do
-  sum <- initRef 0
-  for 0 (min (length x) (length y) $ \ix -> do
-    a <- getArr x ix
-    b <- getArr y ix
-    modifyRef sum $ \s -> s + a * b
-  getRef sum
-\end{code}
-
-\noindent The function's type has changed, as expected, but its body remains the same as before.
-
-The programs we have show in this section are simply a convenient model of imperative programs and, from a users perspective, can be rather clunky. Nevertheless, they are easy to compile down to source code, and the next section goes into their representation and interpretation in detail. Later chapters show how programs is also a convenient translation target for vector computations and signal processing networks.
-
-% As an example of a larger function, we also implement the full FIR filter. The filter itself is fairly straightforward: inputs are shifted onto the taps one by one and for each input the current impulse response is calculated using a dot-product:
-
-%\begin{code}
-%fir :: (MonadComp m, TypeM m a, Num a) => Arr m a -> Arr m a -> m (Arr m a)
-%fir bs xs = do
-%  taps <- newArr (length bs)
-%  ys   <- newArr (length xs)
-%  for 0 (length bs) $ \ix -> setArr taps ix 0
-%  for 0 (length xs) $ \ix -> do
-%    for 1 (length bs) $ \jx -> do
-%      tmp <- getArr taps (jx - 1)
-%      setArr taps jx tmp
-%    x <- getArr xs ix
-%    setArr taps 0 x
-%    o <- dot bs taps
-%    setArr ys ix o
-%  return ys
-%\end{code}
-
-% While the above implementation is suitable for a software, it is perhaps not ideal as a hardware design. Signal processing in C is often done with arrays over chunks of the input, while a hardware is build around signals and processes to drive a continuous filter. Assuming a hardware description is our goal, the necessary change is however quite small: we swap the input and output arrays for signals and change the outer for-loop into a process. Rewriting programs at this scale is a kind of optimization we think developers are comfortable with.
-
-\section{Instructions}
+\section{Imperative Model}
 \label{instr}
 
-The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational} and is as such based on a monadic representation of imperative programs. Like our inspiration, the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. Unlike previous work, we also take into account the fact that different languages will support different expressions, types, etc. Some might even share a sub-set of each others instructions but include a few of their own primitives---we would rather not copy an entire language just to add a new primitive. We have thus taken extra care to make sure instructions, and to some extent the expressions, can be defined compositionally. The program type is therefore parameterized on its instructions, as before, but also includes a type-level list for the other types associated with the language:
+The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. Beyond instructions, the program is parameterized on a list of other types associated with a program, like an expression and a predicate type:
 
 \begin{code}
 data Program instr fs a
 \end{code}
 
-The general idea behind the program type is that it allows for instructions to be separated from their sequencing, since an instruction's effect will only depend on its interaction with other instructions. That is, Haskell's monadic syntax ensures that any instructions we use in our programs are sequenced correctly. As a consequence of this separation, the task of implementing a language based on programs is the same as writing an interpreter for the language's instructions. In particular, we can define a generic interpreter for programs that maps them to their intended meaning:
+As an instruction's effect will only depend on its interaction with other instructions, they can safely be separated from their sequencing as programs. The task of implementing a program type is therefore equivalent to writing an interpreter for its instructions. One such interpreter, that maps programs to their intended meaning as a monad, is provided by the co-design library:
 
 \begin{code}
 interpret :: (Interp i m fs, HFunctor i, Monad m) => Program i fs a -> m a
@@ -135,14 +95,16 @@ interpret :: (Interp i m fs, HFunctor i, Monad m) => Program i fs a -> m a
 
 \begin{code}
 class Interp instr m fs where
-  interp :: instr (P2 m fs) a -> m a
+  interp :: instr '(m, fs) a -> m a
 \end{code}
 
-\noindent where \codei{P2} is a synonym for a parameter list of two elements, here \codei{m} and \codei{fs}. Note also that \codei{interpret} also require that its instructions are higher-order functors:
+\noindent where \codei{'(m, fs)} is type level parameter list of two elements, \codei{m} and \codei{fs}. The second constraint of \codei{interpret}, \codei{HFunctor}, limits instructions to higher-order functors:
+
+% TODO: continue editing here.
 
 \begin{code}
 class HFunctor h where
-  hfmap :: (forall b . f b -> g b) -> h (P2 f fs) a -> h (P2 g fs) a
+  hfmap :: (forall b . f b -> g b) -> h '(f, fs) a -> h '(g, fs) a
 \end{code}
 
 Higher-order instructions, parameterized on the program they are part of, makes it possible to define instruction sets compositionally using, for instance, a technique like Data Types \`{a} La Carte~\cite{DTC}. Extensible instructions sets are particularly useful for our co-design language, as any existing hardware and software instructions can be reused for new systems; we only need to add support for new intrinsic instructions and expressions. That is, to extend either the hardware or software language, we only need to add a data type of our new primitive, define a new set of instructions that includes it, and add support for its interpretation. 
@@ -503,3 +465,5 @@ data Stream instr exp pred a where
 \noindent A stream's outer program is used to initialize the stream, which results in another program that in turn produces the output values and updates the state.
 
 \end{document}
+
+%%  LocalWords:  pipelining

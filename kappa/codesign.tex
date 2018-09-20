@@ -67,7 +67,7 @@ class Monad m => Control m where
 type Comp m = (Monad m, References m, Arrays m, Control m)
 \end{code}
 
-In addition to the collection of classes in \codei{MonadComp}, there are also classes of operations that only one of the two languages support. The type classes there form a hierarchy with monads at the base. Classes intended for either the software or hardware branches also require the type is an extension of their respective monads. For example, hardware processes are given by the following type class:
+In addition to the collection of classes in \codei{MonadComp}, there are also classes of operations that only one of the two languages support. The type classes there form a hierarchy with monads at the base. Classes intended for either the software or hardware branches also require the type is an extension of their respective monads. For example, the function for a hardware process is defined by the following type class:
 
 \begin{code}
 class HardwareMonad m => Process m where
@@ -79,11 +79,13 @@ The co-design language is intended to provide a convenient model of imperative p
 \section{Imperative Model}
 \label{instr}
 
-The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. Beyond instructions, the program is parameterized on a list of other types associated with a program, like an expression and a predicate type:
+The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. In addition to instructions, the new program type is also parameterized on a list of other types associated with a program:
 
 \begin{code}
 data Program instr fs a
 \end{code}
+
+\noindent where the type-level list \codei{fs} could include, for example, the types of subprograms and expressions and a type predicate.
 
 As an instruction's effect will only depend on its interaction with other instructions, they can safely be separated from their sequencing as programs. The task of implementing a program type is therefore equivalent to writing an interpreter for its instructions. One such interpreter, that maps programs to their intended meaning as a monad, is provided by the co-design library:
 
@@ -100,42 +102,38 @@ class Interp instr m fs where
 
 \noindent where \codei{'(m, fs)} is type level parameter list of two elements, \codei{m} and \codei{fs}. The second constraint of \codei{interpret}, \codei{HFunctor}, limits instructions to higher-order functors:
 
-% TODO: continue editing here.
-
 \begin{code}
 class HFunctor h where
   hfmap :: (forall b . f b -> g b) -> h '(f, fs) a -> h '(g, fs) a
 \end{code}
 
-Higher-order instructions, parameterized on the program they are part of, makes it possible to define instruction sets compositionally using, for instance, a technique like Data Types \`{a} La Carte~\cite{DTC}. Extensible instructions sets are particularly useful for our co-design language, as any existing hardware and software instructions can be reused for new systems; we only need to add support for new intrinsic instructions and expressions. That is, to extend either the hardware or software language, we only need to add a data type of our new primitive, define a new set of instructions that includes it, and add support for its interpretation. 
+\noindent which lets the interpreter traverse instructions and recursively updated any subprograms they may contain.
 
-% In the original Operational Monad this could be only done for simple instructions, but with our new program type it can be done even for \emph{control instructions}---instructions that take programs as arguments.
+Instructions are parameterized on the type of their subprograms to facilitate an compositional definition of them that works for both simple instructions and control instructions, using a technique like Data Types \`{a} La Carte~\cite{DTC}. Both \codei{Interp} and \codei{HFunctor} can in fact be instantiated for the product of any instructions that in turn support their respective class, which means that new instructions can be defined and given an interpretation without worrying about whatever instruction set they are part of. Instructions that can be extended in this way are quite useful to the co-design language, as each computational element usually come with its own set of operations.
 
-As an example of how a new instruction can be defined, we introduce the \codei{If} construct:
+As an example of an instruction and how they are interpreted, consider the following datatype that models if-statements:
 
 \begin{code}
-data ControlCMD fs a where
+data If fs a where
   If :: exp Bool -> prog () -> prog () -> ControlCMD (P3 prog exp pred) ()
 \end{code}
 
-\noindent The type parameter \codei{prog} refers to sub-programs, \codei{exp} refers to pure expressions, and \codei{pred} refers to type predicates. Although \codei{pred} is not used in the definition of \codei{If}, it is used by other instructions and therefore included here to keep the parameter lists consistent. \codei{P3} is a synonym for a parameter list of three arguments.
-
-Assuming we have access to a few other instructions like \codei{If}, we can now define a program type that combines several instructions in a Data Types \`{a} La Carte fashion:
+\noindent where \codei{P3} is synonym for a type-level list of three arguments, here \codei{prog}, \codei{exp}, and \codei{pred}. Although \codei{pred} is not used by \codei{If}, it is included to keep its type consistent with other instructions that do use it. \codei{If} can already be added to a program's set of instructions like so:
 
 \begin{code}
-type MyProgram exp pred = Program (If :+: Reference :+: ...) (P2 exp pred)
+type MyProgram = Program (Old :+: If) (P2 Exp Pred)
 \end{code}
 
-\noindent The recursive program type will then set the type of sub-programs in \codei{If} to \codei{MyProgram}.
+\noindent Here, \codei{Old}, \codei{Exp}, and \codei{Pred} are some instruction, expression, and predicate types. The recursive program type will set the type of subprograms in \codei{If} to \codei{MyProgram}.
 
-The final step to our extension is to add support for interpreting \codei{MyProgram}, that is, we must define an instances for \codei{Interp} and \codei{HFunctor}. Fortunately, both classes distribute over \codei{(:+:)}, so we need only define instances for \codei{If}. The \codei{HFunctor} instance is defined as:
+% The final step to our extension is to add support for interpreting \codei{MyProgram}, that is, we must define an instances for \codei{Interp} and \codei{HFunctor}. Fortunately, both classes distribute over \codei{(:+:)}, so we need only define instances for \codei{If}. The \codei{HFunctor} instance is defined as:
 
 \begin{code}
 instance HFunctor ControlCMD where
   hfmap f (If c thn els) = If c (f thn) (f els)
 \end{code}
 
-\noindent While interpretation in, for example, the \codei{IO} monad could look as follows:
+% \noindent While interpretation in, for example, the \codei{IO} monad could look as follows:
 
 \begin{code}
 instance Interp ControlCMD IO fs where

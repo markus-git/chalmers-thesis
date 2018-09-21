@@ -253,29 +253,29 @@ mmap :: Address -> Component a -> Software (Pointer (Soften a))
 call :: Pointer a -> Argument a -> Software ()
 \end{code}
 
-As an example of offloading a program to hardware and interfacing with it from software, consider the sequential dot product from section~\ref{program} as a hardware program with the following type:
+As an example of offloading a program to hardware and interfacing with it from software, consider the sequential dot product from section~\ref{program} implemented as a hardware program with the following type:
 
 \begin{code}
 dotSeq :: HArr Int32 -> HArr Int32 -> Hardware (HExp Int32)
 \end{code}
 
-\noindent Now, this type is m...
+\noindent Types are not first-class values in Haskell, and cannot be inspected by other functions. In order to connect \codei{dotSeq} to an AXI4 interconnect, it must first be given a type signature declaration that is represented using a regular datatype within Haskell, which then can be inspected by other functions. An example of such an signature is given for \codei{dotComp}:
 
 % \noindent While we as designers can read the type of the dot product, other functions cannot. So, before we can hook up the dot-product to an AXI4-lite interconnect and offload it, we need to give it a type signature that can be read by other functions. Seeing as the dot-product takes two arrays as input and then produces an expression as output, we can give it the following signature:
 
 \begin{code}
-comp :: Component (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
-comp = inputArr 3 $ \a -> inputArr 3 $ \b -> returnC $ dot a b
+dotComp :: Component (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
+dotComp = inputArr 3 $ \a -> inputArr 3 $ \b -> outputVal $ dotSeq a b
 \end{code}
 
-\noindent Where \codei{inputArr} adds an array of a given length to the signature, and \codei{returnC} rounds of the type signature with a signal for the dot product's output---the name eludes to a combinatorial return value, rather than it returning a value for the C language. The wrapped \codei{dot} can be hooked up to an interconnect with \codei{axi4lite} and then be compiled, synthesized and put onto hardware.
+\noindent which declares a signature of two input arrays, both with a length of three, and a combinatorial output given by \codei{dotSeq}.
 
-In order to communicate with our offloaded dot-product from software we need to get its physical address from the synthesis tool, which is ``0x4C300000'' in our case. With the address in hand we can now put together a small software program that call our dot-product and print its result to standard output:
+To offload \codei{dotSeq} to hardware, it is first wrapped in an AXI4-lite interconnect by calling \codei{axi4lite}, it is then compiled to a VHDL design and synthesized and, lastly, the generated bit stream is loaded onto, for example, an FPGA's programmable logic. During synthesis, the physical address of the design is established. This address can then be accessed from software with the help of \codei{mmap} and \codei{call}:
 
 \begin{code}
 program :: Software ()
 program = do
-  dot <- mmap "0x4C300000" comp
+  dot <- mmap "0x4C300000" dotComp
   arr <- initArr [1 .. 3]
   brr <- initArr [3 .. 6]
   res <- newRef
@@ -284,41 +284,41 @@ program = do
   printf "%d\n" val
 \end{code}
 
+\noindent Here, \codei{(:>>)} adds an arrays to an argument list, \codei{(:>)} adds a reference, and \codei{nil} is represents an empty list. The type of \codei{call} ensures that \codei{dot} is called with the correct arguments, after which the result can be read from \codei{res}. The memory mapping only needs to be done once to bring the a pointer to the hardware component into scope, whereas calling an component can be done any number of times.
+
 \section{Vectors}
 \label{vectors}
 
-A Sequential program in the co-design language makes use of its array type to express array and vector computations with mutable updates. Arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As we saw in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. To facilitate the design of array and vector functions, we provide the vector language. 
+A sequential program in the co-design language makes use of its array type to express array and vector computations with mutable updates. Arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As shown in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. For such cases, the vector language provides a useful set of combinators.
 
-A typical vector computation starts with a \textit{manifest} vector, that is, a vector that refers directly to an array in memory. Vector operations are then applied, where each operation is overloaded to accept any \textit{pully} vector as input and produces another pully vector. Then, once the various vectors have been constructed, they are assembled into a \textit{pushy} vector and written to memory, resulting in a new manifest vector. The various names for manifest, pully and pushy vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, the ideas which our vectors are based on.
+Vector computations typically start with a \textit{manifest} vector, that is, a vector that refers directly to an array stored in memory. Vector operations are then applied, where each operation is overloaded to accept any \textit{pully} vector as input and produces another pully vector. Then, once the various vectors have been constructed, they are assembled into a \textit{pushy} vector and written to memory, resulting in a new manifest vector. The names for manifest, pully and pushy vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, where pushy and pully vectors are methods of computing arrays, rather than elements stored in memory like manifest vectors.
 
-Manifest vectors are more often than not the immutable arrays provided by the co-design language, as such arrays have an representation in memory. A \codei{Pull} vector on the other hand is not stored in memory, but is rather represented as a function:
+A pully vector consists of a length---the number of elements in the vector---and a function that, given an index in the vector, returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion. Pull vectors are represented as:
 
 \begin{code}
 data Pull exp a where
   Pull :: exp Length -> (exp Index -> a) -> Pull exp a
 \end{code}
 
-\noindent A pully vector consists of a length---the number of elements in the vector---and a function that given an index in the vector returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion.
-
-Pushy vectors go in the opposite direction of pull vectors, and gives us control over a vectors evaluation to the producers rather than the consumer. That is, pushy vectors have a representation that supports nested writes to memory and fusion of operations. A \codei{Push} vector is represented as:
+Push vectors go in the opposite direction of pull vectors, and provides control over a vectors evaluation to the producers rather than the consumer, that is, pushy vectors have a representation that supports nested writes to memory and fusion of operations. A \codei{Push} vector is represented as:
 
 \begin{code}
 data Push m a where
   Push :: Exp m Length -> ((Exp m Index -> a -> m ()) -> m ()) -> Push m a
 \end{code}
 
-\noindent A pushy vector consists of a length, like pull vectors, but their function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the type \codei{m} rather than an expression type; \codei{Exp} is an associated type, like \codei{Arr} from section~\ref{codesign}, and refers to the expression type associated with \codei{m}. The general idea is to instantiate \codei{m} as either of the co-design's two languages and have the push vector's function write each element to an array. In particular, push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors.
+\noindent A push vector consists of a length, like pull vectors, but its function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the monad \codei{m} rather than an expression language; \codei{Exp} is an associated type that refers to the expression type associated with \codei{m}. Push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors instead.
 
-As an example, consider the sum of the square of all numbers from zero to $n$:
+As an example of vectors, consider the sum of the square of all numbers from zero to $n$:
 
 \begin{code}
 squares :: (Num a, Type exp a) => exp a -> exp a
 squares n = sum $ map (\x -> x * x) (1 ... n)
-\end{code} %$
+\end{code}
 
-\noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values from one to $n$, to which a mapping is applied that squares each element. The vector is then converted into a push vector and summed up into a single value.
+\noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values ranging from one to $n$, to which a mapping is applied that squares each element. The vector is then converted into a push vector by \codei{sum} and summed up into a single value.
 
-Each vector type has a different set of operations associated with it, and these operations are chosen in such a way that each vector type only supports those operations which can be performed efficiently for that type. In many cases, the vector type is guided by the types of the operations involved, and follows the typical pattern of a manifest vector being turned into a pull vector, which turns into a push vector, which is then written to memory and turns back into a manifest vector. There are however cases where its preferable to ``skip'' parts of the cycle. For instance, the \codei{squares} function starts with a pull vector rather than a manifest vector.
+Each vector type has a different set of operations associated with it, and these operations are chosen in such a way that each vector type only supports those operations which can be performed efficiently for that type. In many cases, the vector type is guided by the types of the operations involved, and follows the typical pattern of a manifest vector being turned into a pull vector, which turns into a push vector, which is then written to memory and thus turns back into a manifest vector. There are however cases where its preferable to ``skip'' parts of the cycle. For instance, the \codei{squares} function starts with a pull vector rather than a manifest vector.
 
 The functions associated with each kind of vector are overloaded in the kind of vectors they accept: an operation for a pull vector will support the use of any ``pully'' vector type. For instance, the \codei{sum} function used in the above \codei{squares} is defined as follows:
 
@@ -330,23 +330,21 @@ sum = fold (+) 0
 \section{Signal processing}
 \label{signals}
 
-While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} did show that a compositional description can give us a better intuition of what a program consists of. Section~\ref{vectors} addressed this deficiency as its vectors provide a comfortable syntax for composing smaller array functions to form a larger program. For functions that involve a notion of time, we have signals.
+% While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} did show that a compositional description can give us a better intuition of what a program consists of. Section~\ref{vectors} addressed this deficiency as its vectors provide a comfortable syntax for composing smaller array functions to form a larger program. For functions that involve a notion of time the signal language is used.
 
-The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---we cannot construct a signal over other signals. Programming with signals is done compositionally, that is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals:
+The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---it is impossible to construct a signal that produces other signals. Programming with signals is done compositionally, that is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals:
 
 \begin{code}
 repeat :: pred a => exp a -> Sig exp pred a
 
-map :: (pred a, pred b)
-  => (exp a -> exp b)
-  -> Sig exp pred a -> Sig exp pred b
+map :: (pred a, pred b) => (exp a -> exp b) ->
+  Sig exp pred a -> Sig exp pred b
 
-zipWith :: (pred a, pred b, pred c)
-  => (exp a -> exp b -> exp c)
-  -> Sig exp pred a -> Sig exp pred b -> Sig exp pred c
+zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c) ->
+  Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 
-These signal functions model the similarly named functions in Haskell base libraries: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell, or using vectors. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
+The above signal functions model the similarly named functions in Haskell's base library: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell, or using vectors. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
 
 \begin{code}
 instance (Num (exp a), pred a) => Num (Sig exp pred a) where
@@ -356,18 +354,17 @@ instance (Num (exp a), pred a) => Num (Sig exp pred a) where
   --dotLine
 \end{code}
 
-All signal functions we have shown so far have been combinatorial, in the sense that their output only depends on the current inputs. Sequential functions on the other hand needs to access older values. For these, the signal language provides a unit delay:
+All signal functions shown so far have been combinatorial in nature, in the sense that their output only depends on the current inputs. Sequential functions on the other hand needs to access older values. For these, the signal language provides a unit delay:
 
 \begin{code}
 delay :: pred a => exp a -> Sig exp pred a -> Sig exp pred a
 \end{code}
 
-\noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant---the function introduces the notion of a \emph{next time step}, making time enumerable. While \codei{delay} may appear innocent, combined with feedback it can describe any kind of sequential signal network. For example, a parity checker can be defined as:
+\noindent \codei{delay} prepends a value to a signal, delaying its original output by one time instant---the function introduces the notion of a \emph{next time step}, making time enumerable. While \codei{delay} may appear innocent, when combined with feedback it can describe any kind of sequential signal network. For example, a parity checker can be defined as:
 
 \begin{code}
 parity :: Sig exp pred Bool -> Sig exp pred Bool
-parity inp = out where
-  out = zipWith xor (delay false out) input
+parity inp = out where out = zipWith xor (delay false out) input
 \end{code}
 
 As a larger example, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:

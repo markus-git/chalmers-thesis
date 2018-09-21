@@ -344,7 +344,7 @@ zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c) ->
   Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 
-The above signal functions model the similarly named functions in Haskell's base library: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell, or using vectors. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
+The above signal functions model the similarly named functions in Haskell's base library: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
 
 \begin{code}
 instance (Num (exp a), pred a) => Num (Sig exp pred a) where
@@ -367,20 +367,22 @@ parity :: Sig exp pred Bool -> Sig exp pred Bool
 parity inp = out where out = zipWith xor (delay false out) input
 \end{code}
 
-As a larger example, we implement a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and, unlike FIR filter in section~\ref{embedded}, contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
+As a larger example, consider a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
 
 \begin{equation}
 y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \: - \: \sum_{j=1}^{Q} a_{j} \cdot y_{n-j} \right)
 \end{equation}
 \vspace{1mm}
 
-\noindent $P$ and $Q$ are the feed-forward and feedback filter orders and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and is not part of the feedback sum.
+\noindent where $P$ and $Q$ are the feed-forward and feedback filter orders, and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and is not part of the feedback sum.
 
-Examining the above equation we can see that the IIR filter loosely consists of two FIR filters, where the second filter has an extra delay and is recursively defined on its output. As such, we can reuse the FIR filter from section~\ref{embed} and define the filter as:
+Examining the above equation, the IIR filter can be identified to loosely consist of two FIR filters, where the second filter has an extra delay and is recursively defined on its output:
+
+% As such, the FIR filter from section~\ref{embed} can and define the filter as:
 
 \begin{code}
-iir :: (Fractional a, Num (exp a), pred a) => exp a -> [exp a] -> [exp a]
-  -> Sig exp pred a -> Sig exp pred a
+iir :: (Fractional a, Num (exp a), pred a) => exp a -> [exp a] -> [exp a] ->
+  Sig exp pred a -> Sig exp pred a
 iir a0 as bs x = y
   where
     y = (1 / repeat a0) * (upper x - lower y)
@@ -388,11 +390,13 @@ iir a0 as bs x = y
     lower = fir as . delay 0
 \end{code}
 
-A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general we have that recursively defined signals introduce feedback, while recursion over Haskell values, like lists, can be used to build repeating graphs structures.
+\noindent using the FIR filter from section~\ref{embed}.
 
-This behavior of \codei{delay} implies that we can distinguish values that have and haven't been delayed, which is something that's normally not possible to do in Haskell---being able to observe the sharing of \codei{y} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows us to turn signal functions like the above IIR filter into a directed graph. Any sharing is then visible as edges in the graph, connecting the nodes over its operations.
+A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general, recursively defined signals introduce feedback, while recursion over Haskell values, like lists, can be used to build repeating graphs structures.
 
-A graph representation of a signal network enables us to check for cycles, order its nodes, and compile it. Regular programs are however a poor target for signal functions, as its type loses any notion of streaming that a function might have had. So, a signal function is instead turned into a co-iterative stream~\cite{caspi1998}, where each stream has an initial state and a transition function from its current state to an output and a new state. The benefit of this approach is that it allows for infinite data types, like streams, to be handled in a strict and efficient way. The streams themselves are however based on programs:
+This behavior of \codei{delay} implies that functions can distinguish values that have and haven't been delayed, which is something that is normally not possible to do in Haskell---being able to observe the sharing of \codei{y} in \codei{iir} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows the signal compiler to turn signal functions into an directed graph, where sharing is visible as edges in the graph, connecting the nodes of its operations.
+
+A graph representation of a signal network enables the signal compiler to check for cycles, order its nodes, and compile it. Programs from the co-design language are however a poor compilation target for signal functions, as its type loses any notion of streaming that a function originally had. Signal functions are therefore turned into co-iterative streams~\cite{caspi1998} instead. Each such stream has an initial state and a transition function from its current state to an output and a new state. The benefit of this approach is that it allows for infinite data types like streams to be handled in a strict and efficient way:
 
 \begin{code}
 data Stream instr exp pred a where
@@ -400,7 +404,7 @@ data Stream instr exp pred a where
     -> Stream instr exp pred a
 \end{code}
 
-\noindent A stream's outer program is used to initialize the stream, which results in another program that in turn produces the output values and updates the state.
+\noindent where the outer program initialize the stream, which results in another program that produces the stream's output values and updates the state.
 
 \end{document}
 

@@ -20,7 +20,7 @@
 \chapter{Background}
 \label{background}
 
-Today we see embedded systems consisting of everything from general purpose processors (GPPs) to application specific integrated circuits (ASICs). GPPs and ASICs represent two extremes of available architectures, and somewhere in the middle, field programmable gate arrays (FPGAs) can be found. FPGAs provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various components and co-processors which may be specialized to handle a certain task well, and they have a good performance per Watt ration. These properties have made them increasingly popular to use in high-performance, computationally intensive systems~\cite{mcmillan2014}. 
+Today we see embedded systems consisting of everything from general purpose processors (GPPs) to application specific integrated circuits (ASICs). GPPs and ASICs represent two extremes of available architectures, and somewhere in the middle, field programmable gate arrays (FPGAs) can be found. FPGAs provide the best of both worlds: they are close to hardware and can be reprogrammed~\cite{bacon2013}. Modern FPGAs also contain various components and co-processors which may be specialized to handle a certain task well, and they have a good performance per Watt ratio. These properties have made them increasingly popular to use in high-performance, computationally intensive systems~\cite{mcmillan2014}. 
 
 While a modern FPGA shows great promise as a prototypical system for heterogeneous computing, its adoption has been slowed down by the fact that it is difficult to program. The logic blocks of an FPGA are usually programmed in a hardware description language, while its co-processors are programmed in some low-level dialect of C or even assembler. Low-level languages are typically used for embedded systems since they give a designer fine control over the system's capabilities. Such fine control does however come at a cost---a programmer cannot abstract away from the specific system architecture, but must keep the implementation on a low level during the entire design process. Other issues, related to functionality and modularity, come as consequences of the lack of abstraction.
 
@@ -41,7 +41,7 @@ map f []     = []
 map f (x:xs) = f x : map f xs
 \end{code}
 
-The first line specifies the type of \codei{map}, because in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function is applied to a value that does not match its type, the compiler will reject the function and instead point out the type mismatch. In the case of \codei{map}, its type is a function that takes two arguments: a function \codei{f :: a -> b} and a list \codei{xs :: [a]}, and returns an element of type \codei{b}. The second line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list. The third line states that for non-empty lists, \codei{f} should be applied to the list's head and a recursive call should be made with the tail of the list as an argument.
+The first line specifies the type of \codei{map}, because, in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function is applied to a value that does not match its type, the compiler will reject the function and instead point out the type mismatch. In the case of \codei{map}, its type is a function that takes two arguments: a function \codei{f :: a -> b} and a list \codei{xs :: [a]}, it returns a list of elements of type \codei{b}. The second line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list. The third line states that for non-empty lists, \codei{f} should be applied to the list's head and a recursive call should be made with the tail of the list as an argument.
 
 The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators---a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a small set of pre-verified functions. For example, the dot-product from section~\ref{intro} is composed by two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}:
 
@@ -55,7 +55,7 @@ sum = fold (+) 0
 
 \noindent \codei{fmap} here is similar to the above \codei{map} but works for vectors instead of lists, \codei{zip} joins two vectors into a single vector of pairs, and \codei{fold} reduces a vector into a scalar value using addition and starting at zero.
 
-The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g <> f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
+The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g . f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
 
 \begin{code}
 (.) :: (b -> c) -> (a -> b) -> a -> c
@@ -66,7 +66,7 @@ The other piece of glue code that functional programming languages provides is o
 
 While the size of the intermediate result of \codei{f} could potentially spoil any usefulness of the composition, functional programming solves this by only evaluating \codei{f} as much as is needed by \codei{g}. This property is referred to as lazy evaluation and lets us fuse functions without creating any unnecessary, intermediate values. Its benefits extend to embedded types as well, and guarantees fusion of vectors.
 
-This section has given a brief overview of functional programming in Haskell and its beneficial properties for embedded languages. So far, the distinction between regular and embedded Haskell have yet been made. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded in Haskell. 
+This section has given a brief overview of functional programming in Haskell and its beneficial properties for embedded languages. So far, the distinction between regular and embedded Haskell has yet to be made. The following section introduces the concept of domain specific languages, and explains what it entails to be an embedded language in Haskell. 
 
 \section{Domain Specific Languages}
 \label{domain}

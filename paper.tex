@@ -3,7 +3,7 @@
 \RequirePackage[l2tabu,orthodox]{nag} % This package helps prevent you from doing things wrong.
 
 % change doctorate to licentiate if necessary
-\documentclass[licentiate,g5paper, gu]{chalmers-thesis}
+\documentclass[licentiate,g5paper,gu]{chalmers-thesis}
 % All options are; doctorate, licentiate, masters, bachelors, techreport,
 % projectreport, nocover, draft, g5paper, and everything the standard report
 % class support.
@@ -56,6 +56,9 @@
 %\usepackage{subfig}
 \usepackage{mhaskell}
 %\usepackage{yourcustomcommands} % Put your custom commands in a file 'yourcustomcommands.sty' and load it like this.
+
+% ???
+\usepackage[page,toc]{appendix}
 
 \usepackage{lipsum}\setlipsumdefault{1-3} % Package used to put in placeholder text. Remove it.
 
@@ -167,6 +170,46 @@ Paper B introduces my hardware software co-design language and a mature version 
 \subfile{kappa/background}
 \subfile{kappa/codesign}
 \subfile{kappa/results}
+
+\begin{appendices}
+\chapter{Synthesizing in Vivado}
+
+This section explains the processes of manually importing and synthesizing a design in the 2015.2 version of Vivado~\cite{feist2012}. As this processes is the same for all designs, the explanation will focus on the required steps in a general sense rather than showcase a specific example.
+
+Having generated code for a hardware program wrapped in the AXI4-lite interconnect, the first step is loading the code into a Vivado project. In the case of AXI4 projects, Vivado provides a wizard to create an AXI4 template under the  ``Create and Package IP'' action under ``Tools'' in the project's menu---the base project is typically supplied by the system's manufacturer, otherwise a basic one can be created by Vivado.
+
+The AXI4 wizard will ask for a name, organization, and a few other details that are largely irrelevant to the template it generates, only the name is important as it will identify the component once it has been packaged. Afterward, the wizard will ask for a few settings, such as the number and size of its slave registers, these are again irrelevant and will be replaced later on. Once the wizard is finished the template can be added to the project's IP catalog and opened in an editing session, which should contain two files as shown in Figure~\ref{fig:files}.
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/DesignFiles}
+\centering
+\caption{} % Design files generated for a AXI4 peripheral.
+\label{fig:files}
+\end{figure}
+
+The first file in Figure~\ref{fig:files} simply contains a shell entity that instantiates a few constants an calls the empty AXI4-lite slave, which is located in the second file. Its this empty slave that should be substituted by the generated code. Note that, after updating the second design file the references from the first design file needs to be updated as well, since the slave's name most likely changed. Once that has been taken care of, the project can be reviewed and packaged---the review will probably complain that an address port has changed in size, as it always use the full 32 bits rather than a subset like Vivado. Go ahead and update its size accordingly.
+
+Once the AXI4 peripheral has been updated, saved, and packaged, the main project can incorporate it as an ``IP Core'' in a few steps. Firstly, under the ``IP Settings'' menu, there is an option to locate the peripheral's project as a repository and to add its contents to the available IP cores. The component can the be added from either the context menu or from simply right-clicking the block design window and picking the option ``Add IP''. Vivado is able to connect the peripheral automatically to the main project by running its ``Run Connection Automation'' tool---Vivado will typically prompt for this option once an IP has been added. Figure~\ref{fig:system} shows the block design view of an example for a Parallell project that has been stripped to the bare minimum of components (a Zynq with a few components for managing AXI4 peripherals), where the AXI4-lite slave is the smaller box in the lower right of the view. Note that it is possible to get the physical address of the slave from the ``Address Editor'' at this point.
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/ZynqSystem}
+\centering
+\caption{} % Zynq project with AXI4-lite peripheral.
+\label{fig:system}
+\end{figure}
+
+Finally, the last step is to generate a bitstream that flashed onto the FPGA's programmable logic. The project's context menu provides an action for generating the bitstream, and with the example project from Figure~\ref{fig:system}, produces an implementation like the one in Figure~\ref{fig:design}.
+
+\begin{figure}[h]
+\includegraphics[width=0.4\textwidth]{figures/ZynqDesign}
+\centering
+\caption{Implementation of the project.}
+\label{fig:design}
+\end{figure}
+
+\end{appendices}
+
+\clearpage
 
 \nocite{*} % Cites everything from the bibliography
 \printbibliography % This command is new in biblatex. Do not attempt to use style files as with old latex.

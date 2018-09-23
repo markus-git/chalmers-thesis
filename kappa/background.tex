@@ -43,7 +43,7 @@ map f (x:xs) = f x : map f xs
 
 The first line specifies the type of \codei{map}, because, in Haskell, every function is assigned a static type in an effort to attain safer programs---if a function is applied to a value that does not match its type, the compiler will reject the function and instead point out the type mismatch. In the case of \codei{map}, its type is a function that takes two arguments: a function \codei{f :: a -> b} and a list \codei{xs :: [a]}, it returns a list of elements of type \codei{b}. The second line of \codei{map} specifies that it, when given an empty list as denoted by \codei{[]}, returns another empty list. The third line states that for non-empty lists, \codei{f} should be applied to the list's head and a recursive call should be made with the tail of the list as an argument.
 
-The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators---a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a small set of pre-verified functions. For example, the dot-product from section~\ref{intro} is composed by two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}:
+The usefulness of higher-order functions like \codei{map} comes from their ability to encode common patterns: \codei{map} works for all functions and lists that fit its type signature. Functions like \codei{map} are often referred to as combinators---a style of organizing libraries around a few primitive values and functions for combining them. These combinators allow for complex structures to be built from a set of smaller functions. For example, the dot-product from section~\ref{intro} is composed by two combinators: \codei{zipWith}, a generic way of joining two vectors, and \codei{sum}:
 
 \begin{code}
 zipWith :: (a -> b -> c) -> Vec a -> Vec b -> Vec c
@@ -53,7 +53,7 @@ sum :: Vec Int -> Int
 sum = fold (+) 0
 \end{code}
 
-\noindent \codei{fmap} here is similar to the above \codei{map} but works for vectors instead of lists, \codei{zip} joins two vectors into a single vector of pairs, and \codei{fold} reduces a vector into a scalar value using addition and starting at zero.
+\noindent \codei{fmap} here is similar to the above \codei{map} but works for vectors instead of lists, \codei{zip} joins two vectors into a single vector of pairs, and \codei{fold} reduces a vector into a scalar value using addition and starting at zero. 
 
 The other piece of glue code that functional programming languages provides is often referred to as function composition, and enables programs to be glued together. Say that \codei{f} and \codei{g} are two programs, then \codei{g} composed with \codei{f} is written \codei{g . f} and is a program that, when applied to its input \codei{x}, computes \codei{g (f x)}. In Haskell, we can define function composition as:
 
@@ -71,7 +71,7 @@ This section has given a brief overview of functional programming in Haskell and
 \section{Domain Specific Languages}
 \label{domain}
 
-A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and capturing the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer that wants to create an interactive web-page would use JavaScript. DSLs come in two fundamentally different forms: external and internal, where VHDL and JavaScript are both examples of the former.
+A domain specific language (DSL) is a special-purpose language, tailored to a certain problem and capturing the concepts and operations in its domain. For instance, a hardware designer might write in VHDL, while a web-designer who wants to create an interactive web-page would use JavaScript. DSLs come in two fundamentally different forms: external and internal, where VHDL and JavaScript are both examples of the former.
 
 Internal DSLs are embedded in a host language, and are often referred to as embedded domain specific languages (EDSLs). Haskell, with its static type system, flexible overloading and lazy semantics, has come to host a range of EDSLs~\cite{elliott2003}. For instance, popular libraries for parsing, pretty printing, hardware design, and testing have all been embedded in Haskell~\cite{leijen2002, hughes1995, bjesse1998}.
 
@@ -89,7 +89,7 @@ times a b = a * b
 
 \noindent where \codei{Exp} is a short-hand for expressions and is defined as a type synonym for integers, thus an example of a shallow EDSL. Two functions are also provided: \codei{const} to lift integer literals, and \codei{times} to multiply expressions.
 
-Two benefits of a shallowly embedded language like \codei{Exp} are that it is easy to add new functions and that evaluation is straightforward---the a value of type \codei{Exp} is the result of some expression. On the other hand, it is difficult to compile shallow types as there is no representation of the expressing that built its value. It is easier to compile an embedded language if its functions instead return an intermediate representation of their result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as deep embedding, and \codei{Exp} can be reimplemented using it:
+Two benefits of a shallowly embedded language like \codei{Exp} are that it is easy to add new functions and that evaluation is straightforward---the a value of type \codei{Exp} is the result of some expression. On the other hand, it is difficult to compile shallow types as there is no representation of the expression that built its value. It is easier to compile an embedded language if its functions instead return an intermediate representation of their result, which sits between Haskell and the compiled code~\cite{elliott2003}. This technique is known as deep embedding, and \codei{Exp} can be reimplemented using it:
 
 \begin{code}
 data Exp = Const Int | Times Exp Exp
@@ -103,7 +103,7 @@ times a b = Times a b
 
 \noindent where \codei{Exp} is now a datatype that lists all supported expressions, which \codei{const} and \codei{times} use to construct their results.
 
-As values in a deeply embedded language like \codei{Exp} are representations of the expressions that built it, rather than their result, it is possible to interpret them and, for example, define a function that evalutes them into integers:
+As values in a deeply embedded language like \codei{Exp} are representations of the expressions that built them, rather than their result, it is possible to interpret them and, for example, define a function that evaluates them into integers:
 
 \begin{code}
 eval :: Exp -> Int
@@ -113,9 +113,9 @@ eval (Times a b) = (eval a) * (eval b)
 
 \noindent The ability to interpret values come at the cost of making it harder to add new functions over \codei{Exp} without first extending its datatype.
 
-While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. The co-design language does make use of such a combination of deep and shallow embeddings: its core datatype is implemented using a deep embedding and user facing libraries use shallow embeddings built on top of the core. This mixture of embeddings ensures that the core is easy to interpret while simultaneously allowing user-facing libraries to provide a nice and extensible syntax.
+While the implementation of shallow and deep embedding are usually at odds, there has been work done in order to combine their benefits~\cite{svenningsson2012}. The co-design language makes use of such a combination of deep and shallow embeddings: its core datatype is implemented using a deep embedding and user facing libraries use shallow embeddings built on top of the core. This mixture of embeddings ensures that the core is easy to interpret while simultaneously allowing user-facing libraries to provide a nice and extensible syntax.
 
-At this point, this section and the previous one have given a brief overview of functional programming and domain specific languages, showcasing Haskell and the benefits its functional style provides for embedded languages. The next section introduces the co-design language through a few examples and highlights these benefits.
+This section and the previous one have given a brief overview of functional programming and domain specific languages, showcasing Haskell and the benefits its functional style provide for embedded languages. The next section introduces the co-design language through a few examples and highlights these benefits.
 
 \section{Embedded Programming in Haskell}
 \label{embedded}
@@ -172,7 +172,7 @@ dotSeq x y = do
   getRef sum
 \end{code}
 
-\noindent Note that \codei{dotSeq} returns a program, which in turn returns a floating point expression. Programs are a type of \textit{monad}, that is, they are a kind of composable computation description; the functions that manages references and arrays are all monadic, and they are sequenced to look like an imperative program by using Haskell's \codei{do} notation.
+\noindent Note that \codei{dotSeq} returns a program, which in turn returns a floating point expression. Programs are a type of \textit{monad}, that is, they are a kind of composable computation description; the functions that manage references and arrays are all monadic, and they are sequenced to look like an imperative program by using Haskell's \codei{do} notation.
 
 \codei{dotSeq} is not without its own faults, as it is limited to floating point expressions and indices are given manually. The first of these issues can be resolved by Haskell's type class for basic numerical operations, called \codei{Num}. With it, \codei{dotSeq} can be made polymorphic in the kind of values it accepts but still restricted to numerical values that support the required operations:
 
@@ -187,7 +187,7 @@ dotVec :: Num a => Vec a -> Vec a -> Exp a
 dotVec xs ys = sum (zipWith (*) xs ys)
 \end{code}
 
-A dot product based on vectors is not only closer to its mathematical specification, but also sturdier in the sense that it is harder for users to make an error: indices and lengths are now hidden by verified vector functions. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}.
+A dot product based on vectors is not only closer to its mathematical specification, but also sturdier in the sense that it is harder for users to make an error: indices and lengths are now hidden by vector functions. Furthermore, Haskell's lazy evaluation ensures that \codei{dotVec} can be merged freely with the producers of \codei{xs} and \codei{ys}.
 
 Compiling \codei{dotVec} to C with two small example inputs and printing its result to standard output produces the following code (with imports omitted for brevity):
 
@@ -204,14 +204,14 @@ int main() {
 }
 \end{code}
 
-The vector language excels at describing array transformations, but it has some difficulty in describing the kind of recurrence equation that makes up a FIR filter. Nevertheless, a few such recurrence equations are provided by the vector library, one of which is the \codei{recurrenceI} function that can be used to implement the filter:
+The vector language excels at describing array transformations, but it has some difficulty in describing the kinds of recurrence equation that makes up a FIR filter. Nevertheless, a few such recurrence equations are provided by the vector library, one of which is the \codei{recurrenceI} function that can be used to implement the filter:
 
 \begin{code}
 firVec :: Num a => Vec a -> Vec a -> Program (Arr a)
 firVec cs v = recurrenceI (replicate (length cs) 0) v $ \i -> dotVec cs i
 \end{code}
 
-\noindent The recurrence function takes an initial buffer to store old inputs in, a vector to iterate over, and a step function that produces one output at a time given these two inputs. Compiling \codei{firVec} to C can yield the following code, where imports and code unrelated to the filter have been omitted:
+\noindent The recurrence function takes an initial buffer to store old inputs in, a vector to iterate over, and a step function that produces one output at a time given these two inputs. Compiling \codei{firVec} to C yields the following code, where imports and code unrelated to the filter have been omitted:
 
 \begin{code}
 int main() {    
@@ -227,7 +227,7 @@ int main() {
 }
 \end{code}
 
-\noindent where \codei{a0} contains the coefficients, \codei{a1} the input array, and \codei{a3} is input buffer. Note that, since all inputs are present at once, it is possible to rewrite the filter and do without the queue for vectors for all but the first initial segments of the input:
+\noindent where \codei{a0} contains the coefficients, \codei{a1} the input array, and \codei{a3} is the input buffer. Note that, since all inputs are present at once, it is possible to rewrite the filter and do without the queue for vectors for all but the first initial segments of the input:
 
 \begin{code}
 firQ :: Num a => Vec a -> Vec a -> Vec a
@@ -253,7 +253,7 @@ firQ coeff = map (dotVec coeff . reverse) . tail . inits
 % }
 % \end{code}
 
-Both \codei{firQ} and \codei{firVec} showed that an implementation of the FIR filter based on vectors is certainly possible, but they required that either the filter was rewritten to fit the vector library, or that a helper function for recurrence equations was available. Another approach is to instead use the signal processing language. Signals are possible infinite sequences of values, and introduce a notion of time: signals can be delayed to hold its input for some specified period. The FIR filter can be implemented with signals as follows:
+Both \codei{firQ} and \codei{firVec} showed that an implementation of the FIR filter based on vectors is certainly possible, but they required that either the filter was rewritten to fit the vector library, or that a helper function for recurrence equations was available. Another approach is to instead use the signal processing language. Signals are possibly infinite sequences of values that carry a notion of time, that is, it is possible to prepend a value to a signal, effectively delaying its previous output by one time unit. As an example, the FIR filter can be implemented with signals as follows:
 
 \begin{code}
 firSig :: Num a => [Exp a] -> Sig a -> Sig a
@@ -274,8 +274,6 @@ dels e as = iterate (delay e) as
 \end{code}
 
 \noindent \codei{constant} and \codei{delay} are signal functions that introduce a constant signal and a unit delay, respectively.
-
-% We should note that \codei{foldr1}, \codei{zipWith}, \codei{map} and \codei{iterate} are the standard Haskell functions for lists, as opposed to signal functions. Addition and multiplication are lifted to operate element-wise over signals. \codei{constant} and \codei{delay} are proper signal functions and introduce a constant signal and a unit delay, respectively.
 
 From a hardware perspective, \codei{firSig} is arguably closer to the FIR filter's mathematical specification than \codei{firVec}: the input signal is iteratively delayed to form the filter's taps, each tap is then multiplied with a coefficient, after which the taps are summed to form the filters output. Compiling \codei{firSig} to VHDL produces the following hardware design:
 
@@ -333,4 +331,4 @@ The remainder of this thesis covers the co-design, vector, and signal processing
 
 \end{document}
 
-%%  LocalWords:  DSLs EDSLs
+%%  LocalWords:  DSLs EDSLs prepend

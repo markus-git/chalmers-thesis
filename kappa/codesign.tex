@@ -22,7 +22,7 @@
 
 Starting with a single Haskell program, the hardware software co-design library is designed with three main tasks in mind: generate C for the software parts, VHDL for the hardware parts, and a combination of C and VHDL for the transmission of data between processing elements. While C and VHDL are different from one another in that one describes sequential software and the other parallel hardware, both languages can be described with an imperative style of programming. As a consequence, the co-design language is based on a monadic representation of imperative programs.
 
-The general idea behind a monad embedding is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to functions written in a stateful monad. In fact, statements written in a stateful monad can be directly translated into statements in an imperative language. As an example of these similarities, consider the following program for reversing an array in place:
+The general idea behind a monadic representation of imperative programs is that one can view an imperative program as a sequence of instructions to be executed on some machine, which looks similar to functions written in a stateful monad. In fact, statements written in a stateful monad can be directly translated into statements in an imperative language. As an example of these similarities, consider the following program for reversing an array in place:
 
 \begin{code}
 rev :: SArr Int32 -> Software ()
@@ -47,7 +47,7 @@ The fact that \codei{rev} can be implemented in both software and hardware by si
 rev :: (Monad m, Arrays m, Control m, Type m Int32) => Arr m Int32 -> m ()
 \end{code}
 
-\noindent The now generic \codei{rev} substitutes \codei{SArr} and \codei{HArr} for a \codei{Arr}, the array type associated with monad \codei{m}, and introduces three type classes: \codei{Arrays}, which defines the \codei{Arr} type and its related functions; \codei{Control}, for control flow operations like a for-loop; and \codei{Type}, which ensures a type is representable. Parts of these classes are defined as follows:
+\noindent The now generic \codei{rev} substitutes \codei{SArr} and \codei{HArr} for an \codei{Arr m}, the array type associated with monad \codei{m}, and introduces three type classes: \codei{Arrays}, which defines the \codei{Arr} type and its related functions; \codei{Control}, for control flow operations like a for-loop; and \codei{Type}, which ensures a type is representable. Parts of these classes are defined as follows:
 
 \begin{code}
 class Monad m => Arrays m where
@@ -74,12 +74,12 @@ class HardwareMonad m => Process m where
   process :: m () -> m ()
 \end{code}
 
-The co-design language is intended to provide a convenient model of imperative programs and, as was shown in section~\ref{embedded}, also serves as base that extensions like the vector and signal processing languages can be built upon. Furthermore, the ability to write generic programs facilitates design exploration, and while they are not always ideal as hardware description---purely computational instructions does not support, for instance, pipelining---once a layout has been decided, it is easy to fix a program's type to hardware and optimize its implementation.
+The co-design language is intended to provide a convenient model of imperative programs and, as was shown in section~\ref{embedded}, also serves as a base up which extensions like the vector and signal processing languages can be built. Furthermore, the ability to write generic programs facilitates design exploration, and while they are not always ideal as hardware descriptions---purely computational instructions do not support, for instance, pipelining---once a layout has been decided, it is easy to fix a program's type to hardware and optimize its implementation.
 
 \section{Imperative Model}
 \label{instr}
 
-The co-design language is inspired by the work of Josef and Joel~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. In addition to instructions, the new program type is also parameterized on a list of other types associated with a program:
+The co-design language is inspired by the work of Svenningsson and Svensson~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. In addition to instructions, the new program type is also parameterized on a list of other types associated with a program:
 
 \begin{code}
 data Program instr fs a
@@ -93,45 +93,45 @@ As an instruction's effect will only depend on its interaction with other instru
 interpret :: (Interp i m fs, HFunctor i, Monad m) => Program i fs a -> m a
 \end{code}
 
-\codei{interpret} lifts a monadic interpretation of instructions, which may be of varying types, to a monadic interpretation of the whole program. By using different types for the monad \codei{m}, it is possible to implement different ``back ends'' for programs. For example, interpretation in Haskell's \codei{IO} monad creates a way to \emph{run programs}, while interpretation in a code generation monad can be used to make a \emph{compiler}. The interpretation of an instruction set \codei{instr} to the monad \codei{m} is given by \codei{Interp}:
+\codei{interpret} lifts a monadic interpretation of instructions, which may be of varying types, to a monadic interpretation of the whole program. By using different types for the monad \codei{m}, it is possible to implement different ``back ends'' for programs. For example, interpretation in Haskell's \codei{IO} monad creates a way to \emph{run programs}, while interpretation in a code generation monad can be used to make a \emph{compiler}.
+
+For some instruction type \codei{instr}, its interpretation into a monad \codei{m} is given by:
 
 \begin{code}
 class Interp instr m fs where
   interp :: instr '(m, fs) a -> m a
 \end{code}
 
-\noindent where \codei{'(m, fs)} is type level parameter list of two elements, \codei{m} and \codei{fs}. The second constraint of \codei{interpret}, \codei{HFunctor}, limits instructions to higher-order functors:
+\noindent where \codei{'(m, fs)} is type level parameter list of two elements, \codei{m} and \codei{fs}. To extend this interpretation to entire programs, the interpreter must be able to traverse the instruction and recursively apply itself to all of its subprograms. \codei{HFunctor} captures this constraint:
 
 \begin{code}
 class HFunctor h where
   hfmap :: (forall b . f b -> g b) -> h '(f, fs) a -> h '(g, fs) a
 \end{code}
 
-\noindent which lets the interpreter traverse instructions and recursively updated any subprograms they may contain.
+Instructions are parameterized on the type of their subprograms to facilitate a compositional definition of them that works for both simple instructions and control instructions, using a technique like Data Types \`{a} La Carte~\cite{DTC}. As both \codei{Interp} and \codei{HFunctor} can be instantiated for a combination of instructions that in turn support their respective class, new instructions can be defined and given an interpretation without worrying about whatever instruction set of which they are part. Instructions that can be extended in this way are quite useful to the co-design language, as each computational element usually come with its own set of operations.
 
-Instructions are parameterized on the type of their subprograms to facilitate an compositional definition of them that works for both simple instructions and control instructions, using a technique like Data Types \`{a} La Carte~\cite{DTC}. As both \codei{Interp} and \codei{HFunctor} can be instantiated for a combination of instructions that in turn support their respective class, new instructions can be defined and given an interpretation without worrying about whatever instruction set they are part of. Instructions that can be extended in this way are quite useful to the co-design language, as each computational element usually come with its own set of operations.
-
-As an example of an instruction and how they are interpreted, consider the following datatype that models if-statements:
+An instruction that models if-statements can be implemented as follows:
 
 \begin{code}
 data If fs a where
   If :: exp Bool -> prog () -> prog () -> ControlCMD (P3 prog exp pred) ()
 \end{code}
 
-\noindent where \codei{P3} is synonym for a type-level list of three arguments---although \codei{pred} is not used by \codei{If}, it is included to keep its type consistent with other instructions that do use it. A program with can now add \codei{If} to its set of instructions like so:
-
-\begin{code}
-type MyProgram = Program (Old :+: If) (P2 Exp Pred)
-\end{code}
-
-\noindent The program applies itself, \codei{Exp}, and \codei{Pred} as arguments for its instruction set. The \codei{HFunctor} instance for \codei{If} is straightforward:
+\noindent where \codei{prog} refers to sub programs, \codei{exp} to expressions, and \codei{pred} is a type predicate (although \codei{pred} is not used by \codei{If}, it is often included to keep its type consistent with other instructions that do use it). \codei{P3} is synonym for a type-level list of three arguments. The \codei{HFunctor} instance for \codei{If} is straightforward:
 
 \begin{code}
 instance HFunctor If where
   hfmap f (If c thn els) = If c (f thn) (f els)
 \end{code}
 
-If the old instruction set of \codei{MyProgram} supported interpretation in, for instance, the C code generation monad \codei{CGen}, then the added \codei{If} type must support the same interpretation before the instruction stack can be compiled again. Assuming \codei{Exp} can be interpreted in the \codei{CGen} monad, the instance for \codei{If} can be defined as:
+A program can now add \codei{If} to its set of instructions:
+
+\begin{code}
+type Prog = Program (Old :+: If) (P2 Exp Pred)
+\end{code}
+
+\noindent The program applies itself, \codei{Exp}, and \codei{Pred} as arguments for its instruction set. If the old instruction set supported interpretation in, for instance, a C code generation monad, then \codei{If} must support the same interpretation before \codei{Prog} can be compiled again. Assuming \codei{Exp} can compiled to C, the compilation of \codei{If} could be defined as:
 
 \begin{code}
 instance Interp If CGen (P2 Exp Pred) where
@@ -140,9 +140,9 @@ instance Interp If CGen (P2 Exp Pred) where
     addStm [cstm| if ($cc) {$items:tru} else {$items:fls} |]
 \end{code}
 
-\noindent where \codei{addStm} adds the quoted C statement to the code generator---quotation is provided by the Haskell package \textit{language-c-quote}.
+\noindent where \codei{CGen} is the C code generation monad, and \codei{addStm} adds the quoted C statement to the code generator---quotation is provided by the Haskell package \textit{language-c-quote}.
 
-\codei{interp} is by no means the only interpretation available for programs. For example, the above \codei{If} type has two sub-structures that can be mapped, \codei{prog} and \codei{exp}, and \codei{If} is thus a higher-order \textit{bi-functor}:
+\codei{interp} is by no means the only interpretation available for programs. For example, the above \codei{If} type has two sub-structures that can be mapped, \codei{prog} and \codei{exp}, and is therefore a higher-order \textit{bi-functor}:
 
 \begin{code}
 class HFunctor h => HBifunctor h where
@@ -153,7 +153,7 @@ class HFunctor h => HBifunctor h where
     -> h '(g, '(j, fs)) a
 \end{code}
 
-\noindent This special kind of functor is beneficial in that it enables an interpretation scheme which decouple the interpretation of instructions from that of expressions:
+\noindent This special kind of functor is beneficial in that it enables an interpretation scheme that decouple the interpretation of instructions from that of expressions:
 
 \begin{code}
 interpretBi :: (InterpBi instr m fs, HBifunctor instr, Functor m, Monad m)
@@ -173,7 +173,7 @@ dist (x1, y1) (x2, y2) = sqrt (dx**2 + dy**2)
     dy = y1 - y2
 \end{code}
 
-\codei{dist} certainly has the look and feel of a ordinary Haskell expression, but wraps its result \codei{a} in the expression type \codei{exp}. In the co-design language, expressions have a deeply embedded core syntax, and a type of \codei{exp a} is therefore a computation that produces a value of type \codei{a} rather than just a value. The pairs are purely syntactical sugar, as they are not part of the expression syntax and will be removed during interpretation. Also, while \codei{dist} is implemented using \codei{SExp} for software expressions, it could have been defined as a generic expression as well:
+\codei{dist} certainly has the look and feel of an ordinary Haskell expression, but wraps its result \codei{a} in the expression type \codei{exp}. In the co-design language, expressions have a deeply embedded core syntax, and a type of \codei{exp a} is therefore a computation that produces a value of type \codei{a} rather than just a value. The pairs are purely syntactical sugar, as they are not part of the expression syntax and will be removed during interpretation. Also, while \codei{dist} is implemented using \codei{SExp} for software expressions, it could have been defined as a generic expression as well:
 
 \begin{code}
 dist :: (Floating (exp a), Num (exp a), Syntax exp a) =>
@@ -187,7 +187,7 @@ class Let exp where
   share :: (Type exp a, Type exp b) => exp a -> (exp a -> exp b) -> exp b
 \end{code}
 
-\noindent Such abstractions are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations. At the same time, abstractions can however complicate the compilation processes and make it harder to generate efficient code. To address this problem, the co-design language makes use of two expression types: one with only primitive operations that is easy to compile, and one that includes higher-order features. The idea is then to provide an elaboration from the feature rich expressions to program snippets over primitive expressions:
+\noindent Such abstractions are one of the hallmarks of functional programming and let users avoid unnecessary detail and mundane operations. Abstractions can however complicate the compilation process, as they distance the language from its generated source code. The co-design language addresses this problem by using two expression types: one with only primitive operations that is easy to compile, and one that includes higher-order features. The idea is then to provide an elaboration from the feature rich expressions to program snippets over primitive expressions:
 
 % Seeing as the feature rich expression type is an extension of the basic one, the two does inevitable share a few primitives and are therefore defined using a technique similar to Data Types \`{a} La Carte---like the instructions from section~\ref{instr}.
 
@@ -197,7 +197,7 @@ elaborateSExp :: SExp a -> Program SIns (P2 CoreExp SPred) (CoreExp a)
 
 \noindent Wrapping the primitive expressions in programs is necessary to elaborate, for instance, let-bindings, as those are replaced with reference statements.
 
-\codei{elaborateSExp} provides a means to elaborate a single software expression. In order to elaborate an entire program, each instruction must be traversed to find and elaborate any expressions they contain. However, as the result of \codei{elaborateSExp} is monadic, this traversal can be described as interpretation of programs with rich expressions to programs with primitive expressions. This idea is captured by the following function:
+\codei{elaborateSExp} provides a means to elaborate a single software expression. In order to elaborate an entire program, each instruction must be traversed to find and elaborate any expressions it contains. However, as the result of \codei{elaborateSExp} is monadic, this traversal can be described as interpretation of programs with rich expressions to programs with primitive expressions. This idea is captured by the following function:
 
 \begin{code}
 elaborate :: HBifunctor ins1
@@ -205,11 +205,11 @@ elaborate :: HBifunctor ins1
     -> Program ins1 '(exp1, fs) a -> Program ins2 '(exp2, fs) a
 \end{code}
 
-\noindent Compilation, for instance, can now be defined in two steps: first an elaboration to trim expressions, then an interpretation of the resulting program. This staged approach has a few benefits: it is typed, which rule out many potential errors, and it is easier to write than a complete translation into source code.
+\noindent Compilation, for instance, can now be defined in two steps: first an elaboration to remove higher-order expressions, then an interpretation of the resulting program. This staged approach has a few benefits: it is typed, which rules out many potential errors, and it is easier to write than a complete translation into source code.
 
 \section{Components}
 
-The hardware software co-design language aims to fully describe a modern FPGA, which includes the communication between processing elements. This communication is typically done over an AXI4 interconnect. Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that makes it useful for streaming.
+The hardware software co-design language aims to generate all the code necessary to program a modern FPGA, which includes the communication between processing elements. This communication is typically done over an AXI4 interconnect. Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that are useful for streaming.
 
 A lighter version of the AXI4 interconnect is offered through AXI4-lite, which is a subset of the full specification that forgoes the streaming features for a simpler communication model that writes and reads data one piece at a time. While a full AXI4 interconnect certainly is useful, implementing one in the co-design language is still future work. An implementation of the AXI4-lite interconnect is however provided:
 
@@ -239,21 +239,21 @@ axi4lite :: AXIPred a
        -> ())
 \end{code}
 
-\codei{axi4lite} takes any hardware component of type \codei{a}, assuming \codei{a} can be transmitted over wires, and automatically connects it to an AXI4-lite interconnect. The signals generated by \codei{axi4lite} all follow the AXI4 naming standard, and should as such be recognized by most hardware synthesizers as a valid interconnect. In case the detection does not work, or simply is not supported, it is also possible to add the component manually to a design, as shown in appendix~\ref{}.
+\codei{axi4lite} takes any hardware component of type \codei{a}, assuming \codei{a} can be transmitted over wires, and automatically connects it to an AXI4-lite interconnect. The signals generated by \codei{axi4lite} all follow the AXI4 naming standard, and should as such be recognized by most hardware synthesizers as a valid interconnect. In case the detection does not work, or simply is not supported, it is also possible to add the component manually to a design, as shown in Appendix~\ref{vivado}.
 
-Hardware components on the FPGA can interface with each other using port-maps as usual, but an component that is wrapped in an AXI4 interconnect can also be accessed from software with the help of memory-mapped I/O. The general idea is that memory-mapping into a component's physical address causes it to share its address space with the memory of whatever software program is running, that is, the component can be reached by simply reading and writing to pointers into its address. The necessary memory-mapping to connect to a component from software is done by the \codei{mmap}:
+Hardware components on the FPGA can interface with each other using port-maps as usual, but a component that is wrapped in an AXI4 interconnect can also be accessed from software with the help of memory-mapped I/O. The general idea is that memory-mapping into a component's physical address causes it to share its address space with the memory of whatever software program is running, that is, the component can be reached by simply reading and writing to pointers into its address. The necessary memory-mapping to connect to a component from software is done by the \codei{mmap}:
 
 \begin{code}
 mmap :: Address -> Component a -> Software (Pointer (Soften a))
 \end{code}
 
-\noindent Note that \codei{mmap} ``softened'' the component's type by translating its hardware types to their corresponding type in software. A softened pointer can be called from software with a matching set of arguments:
+\noindent Note that \codei{mmap} ``softened'' the component's type by translating its hardware types to their corresponding types in software. A softened pointer can be called from software with a matching set of arguments:
 
 \begin{code}
 call :: Pointer a -> Argument a -> Software ()
 \end{code}
 
-As an example of offloading a program to hardware and interfacing with it from software, consider the sequential dot product from section~\ref{program} implemented as a hardware program with the following type:
+As an example of offloading a program to hardware and interfacing with it from software, consider the sequential dot product from section~\ref{embedded} implemented as a hardware program with the following type:
 
 \begin{code}
 dotSeq :: HArr Int32 -> HArr Int32 -> Hardware (HExp Int32)
@@ -270,7 +270,7 @@ dotComp = inputArr 3 $ \a -> inputArr 3 $ \b -> outputVal $ dotSeq a b
 
 \noindent which declares a signature of two input arrays, both with a length of three, and a combinatorial output given by \codei{dotSeq}.
 
-To offload \codei{dotSeq} to hardware, it is first wrapped in an AXI4-lite interconnect by calling \codei{axi4lite}, it is then compiled to a VHDL design and synthesized and, lastly, the generated bit stream is loaded onto, for example, an FPGA's programmable logic. During synthesis, the physical address of the design is established. This address can then be accessed from software with the help of \codei{mmap} and \codei{call}:
+To offload \codei{dotSeq} to hardware, it is first wrapped in an AXI4-lite interconnect by calling \codei{axi4lite}, it is then compiled to a VHDL design and synthesized and, lastly, the generated bit stream is loaded onto, for example, the FPGA's programmable logic. During synthesis, the physical address of the design is established. This address can then be accessed from software with the help of \codei{mmap} and \codei{call}:
 
 \begin{code}
 program :: Software ()
@@ -284,14 +284,16 @@ program = do
   printf "%d\n" val
 \end{code}
 
-\noindent Here, \codei{(:>>)} adds an arrays to an argument list, \codei{(:>)} adds a reference, and \codei{nil} is represents an empty list. The type of \codei{call} ensures that \codei{dot} is called with the correct arguments, after which the result can be read from \codei{res}. The memory mapping only needs to be done once to bring the a pointer to the hardware component into scope, whereas calling an component can be done any number of times.
+\noindent Here, \codei{(:>>)} adds an arrays to an argument list, \codei{(:>)} adds a reference, and \codei{nil} represents an empty list. The type of \codei{call} ensures that \codei{dot} is called with the correct arguments, after which the result can be read from \codei{res}. The memory mapping only needs to be done once to bring a pointer to the hardware component into scope, whereas calling a component can be done any number of times.
 
 \section{Vectors}
 \label{vectors}
 
 A sequential program in the co-design language makes use of its array type to express array and vector computations with mutable updates. Arrays provide full control over their allocation and assignment, but do so through a low-level and imperative interface. As shown in section~\ref{embedded}, some functions are better expressed in a compositional manner than as a sequential program. For such cases, the vector language provides a useful set of combinators.
 
-Vector computations typically start with a \textit{manifest} vector, that is, a vector that refers directly to an array stored in memory. Vector operations are then applied, where each operation is overloaded to accept any \textit{pully} vector as input and produces another pully vector. Then, once the various vectors have been constructed, they are assembled into a \textit{pushy} vector and written to memory, resulting in a new manifest vector. The names for manifest, pully and pushy vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, where pushy and pully vectors are methods of computing arrays, rather than elements stored in memory like manifest vectors.
+Vector computations typically start with a \textit{manifest} vector, that is, a vector that refers directly to an array stored in memory. Vector operations are then applied, where each operation is overloaded to accept any \textit{pully} vector as input and produces another pully vector. Then, once the various vectors have been constructed, they are assembled into a \textit{pushy} vector and written to memory, resulting in a new manifest vector.
+
+The names for manifest, pull and push vectors draw inspiration from the Pan language~\cite{elliott2003} and push arrays~\cite{claessen2012}, where pully vectors are all pull-like types, that is, types that have a length and support indexing, and pushy vectors are all types that can be converted into push vectors. The distinction between, for instance, pull vectors and pully vectors is made since there are cases where its preferable to ``skip'' parts of the typical cycle of vector computations. Also, note that pushy and pully vectors are both methods of computing arrays, rather than elements stored in memory like manifest vectors.
 
 A pully vector consists of a length---the number of elements in the vector---and a function that, given an index in the vector, returns an element. Furthermore, pull vectors are designed in such a way that all operations fuse together without creating any intermediate structures in memory, a property which is often referred to as vector fusion. Pull vectors are represented as:
 
@@ -300,37 +302,35 @@ data Pull exp a where
   Pull :: exp Length -> (exp Index -> a) -> Pull exp a
 \end{code}
 
-Push vectors go in the opposite direction of pull vectors, and provides control over a vectors evaluation to the producers rather than the consumer, that is, pushy vectors have a representation that supports nested writes to memory and fusion of operations. A \codei{Push} vector is represented as:
+Push vectors go in the opposite direction of pull vectors, and provide control over a vectors evaluation to the producers rather than the consumer, that is, pushy vectors have a representation that supports nested writes to memory and fusion of operations. A \codei{Push} vector is represented as:
 
 \begin{code}
 data Push m a where
   Push :: Exp m Length -> ((Exp m Index -> a -> m ()) -> m ()) -> Push m a
 \end{code}
 
-\noindent A push vector consists of a length, like pull vectors, but its function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the monad \codei{m} rather than an expression language; \codei{Exp} is an associated type that refers to the expression type associated with \codei{m}. Push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors instead.
+\noindent A push vector consists of a length, as in pull vectors, but its function describes how elements are evaluated rather then how they are fetched. As such, they are parameterized on the monad \codei{m} rather than an expression language; \codei{Exp} is an associated type that refers to the expression type associated with \codei{m}. Push arrays implement efficient concatenation and interleaving, which would otherwise introduce unnecessary conditionals had they been implemented with pull vectors instead.
 
-As an example of vectors, consider the sum of the square of all numbers from zero to $n$:
+As an example of vectors, consider the sum of the squares of all numbers from zero to $n$:
 
 \begin{code}
 squares :: (Num a, Type exp a) => exp a -> exp a
 squares n = sum $ map (\x -> x * x) (1 ... n)
 \end{code}
 
-\noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values ranging from one to $n$, to which a mapping is applied that squares each element. The vector is then converted into a push vector by \codei{sum} and summed up into a single value.
+\noindent Note that no vector occurs in the function's type, but they are used internally to compute the result: the infix function \codei{(...)} constructs a pully vector with values ranging from one to $n$, to which a mapping is applied that squares each element. The vector is then consumed by \codei{sum}, which turns it into a single value.
 
-Each vector type has a different set of operations associated with it, and these operations are chosen in such a way that each vector type only supports those operations which can be performed efficiently for that type. In many cases, the vector type is guided by the types of the operations involved, and follows the typical pattern of a manifest vector being turned into a pull vector, which turns into a push vector, which is then written to memory and thus turns back into a manifest vector. There are however cases where its preferable to ``skip'' parts of the cycle. For instance, the \codei{squares} function starts with a pull vector rather than a manifest vector.
+Each vector type has a different set of operations associated with it, and each type only supports those operations that can be performed efficiently for that type (to find out more, read~\cite{claessen2012}). In many cases, the vector type is guided by the types of the operations involved, and follows the typical pattern of a manifest vector being turned into a pull vector, which turns into a push vector, which is then written to memory and thus turns back into a manifest vector. There are however cases where its preferable to skip parts of this cycle. For instance, the \codei{squares} function starts with a pull vector rather than a manifest vector.
 
-The functions associated with each kind of vector are overloaded in the kind of vectors they accept: an operation for a pull vector will support the use of any ``pully'' vector type. For instance, the \codei{sum} function used in the above \codei{squares} is defined as follows:
+% The functions associated with each kind of vector are overloaded in the kind of vectors they accept: an operation for a pull vector will support the use of any ``pully'' vector type. For instance, the \codei{sum} function used in the above \codei{squares} is defined as follows:
 
-\begin{code}
-sum :: (Pully exp vec a, Type exp a, Num a) => vec -> a
-sum = fold (+) 0
-\end{code}
+% \begin{code}
+% sum :: (Pully exp vec a, Type exp a, Num a) => vec -> a
+% sum = fold (+) 0
+% \end{code}
 
 \section{Signal processing}
 \label{signals}
-
-% While the imperative style of programming of the co-design language is already convenient for software realization, section~\ref{embedded} did show that a compositional description can give us a better intuition of what a program consists of. Section~\ref{vectors} addressed this deficiency as its vectors provide a comfortable syntax for composing smaller array functions to form a larger program. For functions that involve a notion of time the signal language is used.
 
 The signal language is based on the concept of signals: possibly infinite sequences of values in some pure expression language, given by the type \codei{Sig}. Conceptually, signals can be thought of as infinite lists. Unlike lists however, a signal is not a first-class value and cannot be nested---it is impossible to construct a signal that produces other signals. Programming with signals is done compositionally, that is, a signal program is a collection of mutually recursive signal functions, each built from repeating values or other signals:
 
@@ -344,7 +344,7 @@ zipWith :: (pred a, pred b, pred c) => (exp a -> exp b -> exp c) ->
   Sig exp pred a -> Sig exp pred b -> Sig exp pred c
 \end{code}
 
-The above signal functions model the similarly named functions in Haskell's base library: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using then given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
+The above signal functions model the similarly named functions in Haskell's base library: \codei{repeat} creates a signal by repeating some value, \codei{map} applies a function to each value of a signal, and \codei{zipWith} joins two signals element-wise using the given function. The idea is to mimic the kind of compositional programming that users normally do in Haskell. Ground types in the expression language are lifted to operate element-wise over signals as well, typically with a type class like \codei{Num}:
 
 \begin{code}
 instance (Num (exp a), pred a) => Num (Sig exp pred a) where
@@ -367,7 +367,7 @@ parity :: Sig exp pred Bool -> Sig exp pred Bool
 parity inp = out where out = zipWith xor (delay false out) input
 \end{code}
 
-As a larger example, consider a infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
+As a larger example, consider an infinite impulse response (IIR) filter, which comprises the second primary type of digital filters used in digital signal processing applications and contains feedback. The IIR filter is typically described and implemented in terms of a difference equation:
 
 \begin{equation}
 y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \: - \: \sum_{j=1}^{Q} a_{j} \cdot y_{n-j} \right)
@@ -377,8 +377,6 @@ y_{n} = {1 \over a_{0}} \: \cdot \: \left( \sum_{i=0}^{P} b_{i} \cdot x_{n-i} \:
 \noindent where $P$ and $Q$ are the feed-forward and feedback filter orders, and $a_{j}$ and $b_{i}$ are the filter coefficients. Note that $a_{0}$ is used in the outer division and is not part of the feedback sum.
 
 Examining the above equation, the IIR filter can be identified to loosely consist of two FIR filters, where the second filter has an extra delay and is recursively defined on its output:
-
-% As such, the FIR filter from section~\ref{embed} can and define the filter as:
 
 \begin{code}
 iir :: (Fractional a, Num (exp a), pred a) => exp a -> [exp a] -> [exp a] ->
@@ -390,13 +388,15 @@ iir a0 as bs x = y
     lower = fir as . delay 0
 \end{code}
 
-\noindent using the FIR filter from section~\ref{embed}.
+\noindent \codei{fir} is the FIR filter from section~\ref{embedded}.
 
 A circular definition of \codei{y} in the IIR filter is possible thanks to the \codei{delay} operator, which ensures a productive network as each output only depends on previous input. In general, recursively defined signals introduce feedback, while recursion over Haskell values, like lists, can be used to build repeating graphs structures.
 
-This behavior of \codei{delay} implies that functions can distinguish values that have and haven't been delayed, which is something that is normally not possible to do in Haskell---being able to observe the sharing of \codei{y} in \codei{iir} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows the signal compiler to turn signal functions into an directed graph, where sharing is visible as edges in the graph, connecting the nodes of its operations.
+This behavior of \codei{delay} implies that functions can distinguish values that have and haven't been delayed, which is something that is normally not possible to do in Haskell---being able to observe the sharing of \codei{y} in \codei{iir} will, by definition, break any referential transparency. In fact, the internals of \codei{delay} makes use of a restricted form of observable sharing~\cite{claessen1999, gill2009}. This allows the signal compiler to turn signal functions into a directed graph, where sharing is visible as edges in the graph, connecting the nodes of its operations.
 
-A graph representation of a signal network enables the signal compiler to check for cycles, order its nodes, and compile it. Programs from the co-design language are however a poor compilation target for signal functions, as its type loses any notion of streaming that a function originally had. Signal functions are therefore turned into co-iterative streams~\cite{caspi1998} instead. Each such stream has an initial state and a transition function from its current state to an output and a new state. The benefit of this approach is that it allows for infinite data types like streams to be handled in a strict and efficient way:
+A graph representation of a signal network enables the signal compiler to check for cycles, order its nodes, and translate it into an imperative program. Directly mapping a signal network into a program in the co-design language is however a poor choice, as programs have no notion of the streaming that its signal function originally had.
+
+Co-iterative streams~\cite{caspi1998} makes for a better compilation target, as they allow for infinite data types to be handled in a strict and efficient way. Co-iterative streams consists of an initial state and a transition function from its current state to an output and a new state. The benefit of this approach is that it :
 
 \begin{code}
 data Stream instr exp pred a where
@@ -404,8 +404,8 @@ data Stream instr exp pred a where
     -> Stream instr exp pred a
 \end{code}
 
-\noindent where the outer program initialize the stream, which results in another program that produces the stream's output values and updates the state.
+\noindent where the outer program initializes the stream, which results in another program that produces the stream's output values and updates the state.
 
 \end{document}
 
-%%  LocalWords:  pipelining
+%%  LocalWords:  pipelining Svenningsson Svensson

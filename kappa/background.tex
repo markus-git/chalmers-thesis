@@ -275,7 +275,7 @@ dels e as = iterate (delay e) as
 
 \noindent \codei{constant} and \codei{delay} are signal functions that introduce a constant signal and a unit delay, respectively.
 
-From a hardware perspective, \codei{firSig} is arguably closer to the FIR filter's mathematical specification than \codei{firVec}: the input signal is iteratively delayed to form the filter's taps, each tap is then multiplied with a coefficient, after which the taps are summed to form the filters output. Compiling \codei{firSig} to VHDL produces the following hardware design:
+From a hardware perspective, \codei{firSig} is arguably closer to the FIR filter's mathematical specification than \codei{firVec}: the input signal is iteratively delayed to form the filter's taps, each tap is then multiplied with a coefficient, after which the taps are summed to form the filter's output. Compiling \codei{firSig} to VHDL produces the following hardware description:
 
 % TODO: Might be an error in the code, as both processes trigger on the clock.
 \begin{code}
@@ -313,14 +313,14 @@ END ARCHITECTURE behav ;
 
 \section{Summary}
 
-Section~\ref{intro} gave an introduction to heterogeneous embedded systems as a interesting development towards energy efficient computing. These systems are not without challenges, as the presence of multiple processing elements raises all of the issues involved with homogeneous systems in addition to the issues of heterogeneity in the system. A modern FPGA was presented as a prototypical heterogeneous system of note.
+Section~\ref{intro} gave an introduction to heterogeneous embedded systems as an interesting development towards energy efficient computing. These systems are not without challenges, as the presence of multiple processing elements raises all of the issues involved with homogeneous systems in addition to the issues of heterogeneity in the system. A modern FPGA was presented as a prototypical heterogeneous system of note.
 
 Functional languages were proposed in section~\ref{background} as a way to address issues typically found in embedded system design, in particular the modularity issues that come from the low-level languages they are usually programmed with. Section~\ref{functional} gave a brief overview of functional programming and section~\ref{domain} went on to demonstrate techniques for embedded languages in Haskell. Finally, section~\ref{embedded} showcased the co-design language, the current attempt at bringing the benefits of functional programming languages to the domain of embedded heterogeneous systems.
 
 The remainder of this thesis covers the co-design, vector, and signal processing languages in detail and highlights the techniques they are built on. In particular, the following contributions are made:
 
 \begin{itemize}
-\item We present a language for hardware software co-design that is embedded in Haskell and designed with modern FPGA programming in mind, able to generate both C and VHDL for the FPGAs various processing elements, including the necessary glue code for connections between elements. Also, the language is extensible to support any differences in instruction sets between elements.
+\item We present a language for hardware software co-design that is embedded in Haskell and designed with modern FPGA programming in mind, able to generate both C and VHDL for the FPGA's various processing elements, including the necessary glue code for connections between elements. Also, the language is extensible to support any differences in instruction sets between elements.
 
 \item We present two extensions to the hardware software co-design language, one for vector computations and another for signal processing. The vector language supplements an array type with vector types and combinators that support fusion, and the signal processing language adds support for synchronous data-flow to an expression type. Both extensions are intended to be used with the co-design language, but abstract over their underlying types and can be used with other embedded languages as well.
 

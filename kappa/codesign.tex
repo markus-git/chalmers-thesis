@@ -17,7 +17,7 @@
 \documentclass[../paper.tex]{subfiles}
 \begin{document}
 
-\chapter{Co-Design}
+\chapter{Hardware Software Co-Design}
 \label{codesign}
 
 Starting with a single Haskell program, the hardware software co-design library is designed with three main tasks in mind: generate C for the software parts, VHDL for the hardware parts, and a combination of C and VHDL for the transmission of data between processing elements. While C and VHDL are different from one another in that one describes sequential software and the other parallel hardware, both languages can be described with an imperative style of programming. As a consequence, the co-design language is based on a monadic representation of imperative programs.
@@ -76,7 +76,7 @@ class HardwareMonad m => Process m where
 
 The co-design language is intended to provide a convenient model of imperative programs and, as was shown in section~\ref{embedded}, also serves as a base up which extensions like the vector and signal processing languages can be built. Furthermore, the ability to write generic programs facilitates design exploration, and while they are not always ideal as hardware descriptions---purely computational instructions do not support, for instance, pipelining---once a layout has been decided, it is easy to fix a program's type to hardware and optimize its implementation.
 
-\section{Imperative Model}
+\section{Imperative Model of Programs}
 \label{instr}
 
 The co-design language is inspired by the work of Svenningsson and Svensson~\cite{BjornBenny} and by the Operational Monad~\cite{Operational}: the program type is deeply embedded in order to capture a computation as an algebraic data type and parameterized on the instructions used in said computations. In addition to instructions, the new program type is also parameterized on a list of other types associated with a program:
@@ -160,7 +160,7 @@ interpretBi :: (InterpBi instr m fs, HBifunctor instr, Functor m, Monad m)
   => (forall b . exp b -> m b) -> Program instr '(exp, fs) a -> m a
 \end{code}
 
-\section{Expressions}
+\section{Pure Expressions}
 \label{expr}
 
 An embedding based on monads provides a representation of the statements for imperative languages, but most meaningful languages also include a notion of pure expressions. These expressions contain a combination of one or more values, constants, variables, and operators that take two or more expressions. As a small example of such expressions in the co-design language, consider a function for computing the distance between two points in a plane:
@@ -207,7 +207,8 @@ elaborate :: HBifunctor ins1
 
 \noindent Compilation, for instance, can now be defined in two steps: first an elaboration to remove higher-order expressions, then an interpretation of the resulting program. This staged approach has a few benefits: it is typed, which rules out many potential errors, and it is easier to write than a complete translation into source code.
 
-\section{Components}
+\section{Mixing Hardware and Software}
+\label{comp}
 
 The hardware software co-design language aims to generate all the code necessary to program a modern FPGA, which includes the communication between processing elements. This communication is typically done over an AXI4 interconnect. Full AXI4 offers a range of interconnects that include variable data and address bus widths, high bandwidth burst and cached transfers, and various other transaction features that are useful for streaming.
 
@@ -261,8 +262,6 @@ dotSeq :: HArr Int32 -> HArr Int32 -> Hardware (HExp Int32)
 
 \noindent Types are not first-class values in Haskell, and cannot be inspected by other functions. In order to connect \codei{dotSeq} to an AXI4 interconnect, it must first be given a type signature declaration that is represented using a regular datatype within Haskell, which then can be inspected by other functions. An example of such an signature is given for \codei{dotComp}:
 
-% \noindent While we as designers can read the type of the dot product, other functions cannot. So, before we can hook up the dot-product to an AXI4-lite interconnect and offload it, we need to give it a type signature that can be read by other functions. Seeing as the dot-product takes two arrays as input and then produces an expression as output, we can give it the following signature:
-
 \begin{code}
 dotComp :: Component (HArr Int32 -> HArr Int32 -> Signal Int32 -> ())
 dotComp = inputArr 3 $ \a -> inputArr 3 $ \b -> outputVal $ dotSeq a b
@@ -285,6 +284,28 @@ program = do
 \end{code}
 
 \noindent Here, \codei{(:>>)} adds an arrays to an argument list, \codei{(:>)} adds a reference, and \codei{nil} represents an empty list. The type of \codei{call} ensures that \codei{dot} is called with the correct arguments, after which the result can be read from \codei{res}. The memory mapping only needs to be done once to bring a pointer to the hardware component into scope, whereas calling a component can be done any number of times.
+
+The example \codei{program} can be compiled to software as any other program, but the ``function call'' to \codei{dot} will be replaced by a few pointer operations istead:
+
+\begin{code}
+void program() {
+  f_map(0x43C00000, (void **) &pointer_dot, &offset_dot);
+  pointer_dot = pointer_dot + offset_dot;
+  int * input_dot1  = pointer_dot;
+  int * input_odt2  = pointer_dot + 5;
+  int * output_dot1 = pointer_dot + 10;
+  ...
+  for (i=0;i<4;i++) {
+    *(input_dot1 + i) = a1[i];
+    *(input_odt2 + i) = a2[i];
+  }
+  printf("%d\n", *(output_dot1));
+}
+\end{code}
+
+\noindent where \codei{f_map} is a C function that performs all the necessary memory-mapping setup for \codei{pointer_dot}, and is generated by the co-design language's software compiler. The general idea of these pointers are that they provide the different address into the hardware components registers (for example, \codei{*(input_dot1 + 2)} refers to the third element in the first input array). Underneath these pointers lies a buffer that the AXI4 bus will read and forward any values to \codei{dot} in a synchronous manner.
+
+Running the above code on one of the embedded ARM cores will only provide a slight speedup, if any,  when compared to a dot-product fully implemented in software. This is however expected, as the computational weight of dot product is quite small and does not necessarily outweigh the communication cost of sending the arrays to hardware. For larger examples where the computation being offloaded far outweighs its communication cost, as those presented in Paper B, the mixed software and hardware approach can and does provide a bigger benefit.
 
 \section{Vectors}
 \label{vectors}

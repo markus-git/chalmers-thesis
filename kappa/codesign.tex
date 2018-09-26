@@ -292,8 +292,8 @@ void program() {
   f_map(0x43C00000, (void **) &pointer_dot, &offset_dot);
   pointer_dot = pointer_dot + offset_dot;
   int * input_dot1  = pointer_dot;
-  int * input_odt2  = pointer_dot + 5;
-  int * output_dot1 = pointer_dot + 10;
+  int * input_odt2  = pointer_dot + 4;
+  int * output_dot1 = pointer_dot + 8;
   ...
   for (i=0;i<4;i++) {
     *(input_dot1 + i) = a1[i];
